@@ -67,14 +67,14 @@ def load_embedding(names, langs=['en','it'], k=-1, mode='test'):
             if os.path.isfile(text_emb_path):
                 text_features = np.load(text_emb_path, allow_pickle=True)
                 text_features = torch.Tensor(text_features)
+                clip_model, preprocess = clip.load("ViT-B/32")
+                clip_model.cuda().eval()
+                image_features = get_clip_image_features(clip_names[langs[i]], names['image'], 1, clip_model)
+                logit_scale = clip_model.logit_scale.exp().float()
+                embs[i] = cal_probs_from_features(image_features, text_features, logit_scale)
             else:
                 texts = generate_texts(templates[langs[i]], vocabs[i])
                 embs[i] = get_fingerprints(texts, langs[i], image_name=names['image'], num_images=1, K=len(templates[langs[i]]))
-            clip_model, preprocess = clip.load("ViT-B/32")
-            clip_model.cuda().eval()
-            image_features = get_clip_image_features(clip_names[langs[i]], names['image'], 1, clip_model)
-            logit_scale = clip_model.logit_scale.exp().float()
-            embs[i] = cal_probs_from_features(image_features, text_features, logit_scale)
             np.save(emb_path, embs[i]) 
     return embs, vocabs, translation
 
@@ -92,11 +92,11 @@ def translate(names, langs=['en','it']):
 
 
 def get_accuracy(names, langs=['en','it']):
-    # embs, vocabs, _ = load_text_embedding(names, langs, k=1)
-    vocabs, translation = load_vocab_translation(names, langs)
-    embs = {}
-    embs[0] = np.load('../dicts/npy/fasttext_en_test.npy', allow_pickle=True)
-    embs[1] = np.load('../dicts/npy/fasttext_it_test.npy', allow_pickle=True)
+    embs, vocabs, _ = load_embedding(names, langs, k=1)
+    # vocabs, translation = load_vocab_translation(names, langs)
+    # embs = {}
+    # embs[0] = np.load('../dicts/npy/fasttext_en_test.npy', allow_pickle=True)
+    # embs[1] = np.load('../dicts/npy/fasttext_it_test.npy', allow_pickle=True)
     for i in range(2):
         embs[i] = torch.Tensor(embs[i]).cuda()
     
@@ -108,17 +108,19 @@ def get_accuracy(names, langs=['en','it']):
 
     print('accuracy')
     method = 'csls_knn_10'
-    results = get_word_translation_accuracy(langs[0], word2ids[0], embs[0], langs[1], word2ids[1], embs[1], method, dico_eval='default')
+    DIC_EVAL_PATH = '../dicts/texts/'
+    dico_eval = os.path.join(DIC_EVAL_PATH, '{}_{}_{}_test.txt'.format(names['data'], langs[0], langs[1]))
+    results = get_word_translation_accuracy(langs[0], word2ids[0], embs[0], langs[1], word2ids[1], embs[1], method, dico_eval)
     print(results)
 
 
 
 def load_text_embedding(names, langs=['en','it'], k=-1, mode='test'):
     vocabs, translation = load_vocab_translation(names, langs, mode)
-    embs = {} # types of e
-    for i in range(2):
-        embs[i] = np.load('../dicts/npy/fasttext_{}_{}.npy'.format(langs[i], mode))
-    return embs, vocabs, translation   
+    # embs = {} # types of e
+    # for i in range(2):
+    #     embs[i] = np.load('../dicts/npy/fasttext_{}_{}.npy'.format(langs[i], mode))
+    # return embs, vocabs, translation   
     for i in range(2):
         emb_path = '../dicts/npy/{}_text_embedding_{}_{}_{}.npy'.format(names['data'], langs[i], k, mode)
         if os.path.isfile(emb_path):
@@ -186,10 +188,16 @@ def supervised(names, langs):
         
 
 if __name__ == '__main__':
-    names = {'data': 'dict', 'image': 'cifar100'}
+    names = {'data': 'noun', 'image': 'cifar100'}
     langs = ['en', 'it']
-    # get_accuracy(names, langs)
+    get_accuracy(names, langs)
     # translate(names, langs)
-    supervised(names, langs)
+    # supervised(names, langs)
+    # vocabs, translation = load_data_from_two_files(names['data'], langs, 'test')
+    # f= open('../dicts/texts/noun_en_it_test.txt', "w") 
+    # for i in range(len(vocabs[0])):
+    #     f.write("{} {}\n".format(vocabs[0][i], vocabs[1][i]))
+    # f.close()
+
 
    

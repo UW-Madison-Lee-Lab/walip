@@ -1,0 +1,10 @@
+aereo
+automobile
+uccello
+gatto
+cervo
+cane
+rana
+cavallo
+nave
+camion

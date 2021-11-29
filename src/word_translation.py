@@ -19,7 +19,7 @@ import numpy as np
 import torch
 
 
-DIC_EVAL_PATH = '/mnt/nfs/scratch1/dthai/Projects/clip-uwt/muse/data/crosslingual/dictionaries/'
+DIC_EVAL_PATH = '../muse/data/crosslingual/dictionaries/'
 
 
 logger = getLogger()
