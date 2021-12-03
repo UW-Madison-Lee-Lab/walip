@@ -62,9 +62,11 @@ def load_image_data(image_name, num_images=1):
         images = []
         # pick randomly
         if image_name == 'cifar100':
-            with open('../dicts/texts/cifar100_index.txt') as f:
+            with open('../dicts/texts/cifar100_en.txt') as f:
+            #with open('../dicts/texts/cifar100_index.txt') as f:
                 lines = f.readlines()
             d = {}
+            import pdb; pdb.set_trace()
             for l in lines:
                 k, v = l.strip().split(' ')
                 k, v = int(k), int(v)

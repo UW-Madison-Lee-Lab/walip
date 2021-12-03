@@ -1,4 +1,4 @@
-
+import pdb
 
 
 class AverageMeter(object):
@@ -72,6 +72,7 @@ def load_data_from_two_files(data_name, langs=['en', 'it']):
     lines = []
     for l in langs:
         fpath = '../dicts/texts/{}_{}.txt'.format(data_name, l)
+        print('loading data from' + fpath)
         with open(fpath) as f:
             lines.append(f.readlines())
 

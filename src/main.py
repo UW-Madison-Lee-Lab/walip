@@ -48,7 +48,6 @@ def example():
 
 
 def load_vocab_translation(names, langs=['en','it'], mode='test'):
-    pdb.set_trace()
     if names['data'] in ['dict']:
         vocabs, translation = load_data_from_one_files(names['data'], langs, mode)
     else:
@@ -190,7 +189,8 @@ def supervised(names, langs):
         
 
 if __name__ == '__main__':
-    names = {'data': 'noun', 'image': 'cifar100'}
+    #names = {'data': 'noun', 'image': 'cifar100'}
+    names = {'data': 'cifar100', 'image': 'cifar100'}
     langs = ['en', 'it']
     get_accuracy(names, langs)
     # translate(names, langs)
