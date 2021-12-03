@@ -10,6 +10,7 @@ from word_translation import get_word_translation_accuracy, read_txt_embeddings
 import os
 os.environ['TOKENIZERS_PARALLELISM'] = "false"
 
+import pdb
 
 def example():
     eng_vocab = ["outbreak",
@@ -47,10 +48,11 @@ def example():
 
 
 def load_vocab_translation(names, langs=['en','it'], mode='test'):
+    pdb.set_trace()
     if names['data'] in ['dict']:
         vocabs, translation = load_data_from_one_files(names['data'], langs, mode)
     else:
-        vocabs, translation = load_data_from_two_files(names['data'], langs, mode)
+        vocabs, translation = load_data_from_two_files(names['data'], langs) #, mode)
     return vocabs, translation
 
 def load_embedding(names, langs=['en','it'], k=-1, mode='test'):
