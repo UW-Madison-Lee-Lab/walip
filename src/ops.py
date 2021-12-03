@@ -62,26 +62,24 @@ def load_image_data(image_name, num_images=1):
         images = []
         # pick randomly
         if image_name == 'cifar100':
-            with open('../dicts/texts/cifar100_en.txt') as f:
-            #with open('../dicts/texts/cifar100_index.txt') as f:
-                lines = f.readlines()
-            d = {}
-            import pdb; pdb.set_trace()
-            for l in lines:
-                k, v = l.strip().split(' ')
-                k, v = int(k), int(v)
-                if k in d:
-                    d[k].append(v)
-                else:
-                    d[k] = [v]
+            # with open('../dicts/texts/cifar100_index.txt') as f:
+            #     lines = f.readlines()
+            # d = {}
+            # for l in lines:
+            #     k, v = l.strip().split(' ')
+            #     k, v = int(k), int(v)
+            #     if k in d:
+            #         d[k].append(v)
+            #     else:
+            #         d[k] = [v]
             num_classes = 100
             for c in range(num_classes):
-                # indices = np.argwhere(np.asarray(image_dataset.targets) == c)
-                # for i in range(num_images):
-                    # images.append(image_dataset[indices[i][0]][0])
+                indices = np.argwhere(np.asarray(image_dataset.targets) == c)
                 for i in range(num_images):
-                    idx = d[c][i]
-                    images.append(image_dataset[idx][0])
+                    images.append(image_dataset[indices[i][0]][0])
+                # for i in range(num_images):
+                #     idx = d[c][i]
+                #     images.append(image_dataset[idx][0])
         elif image_name == 'cifar10':
             num_classes = 10
             for c in range(num_classes):
