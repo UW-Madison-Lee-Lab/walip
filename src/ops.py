@@ -50,7 +50,7 @@ def load_image_data(image_name, num_images=1):
             labels = np.asarray(f.get('labels'))
     else:
         from torchvision.datasets import ImageFolder
-        data_dir = '/mnt/nfs/work1/mccallum/dthai/tuan_data/imagenet/val'
+        data_dir = '../../repgan/data/imagenet/val'
         image_dataset = ImageFolder(data_dir, preprocess)
 
     fpath = '../dicts/npy/image_{}_{}_{}_index.npy'.format(image_name, 'en', 'it')
@@ -102,8 +102,8 @@ def get_clip_image_features(clip_name, image_name, num_images=1, model=None):
     if clip_name == "ViT-B/32":
         clip_name = 'vit32'
     fname = '{}_{}_{}.npy'.format(image_name, num_images, clip_name)
-    image_feature_path = '../data/image_feature_' + fname
-    image_path = '../data/image_' + fname
+    image_feature_path = '../dicts/npy/images/image_feature_' + fname
+    image_path = '../dicts/npy/images/image_' + fname
     if os.path.isfile(image_feature_path):
         image_features = np.load(image_feature_path, allow_pickle=True)
         image_features = torch.Tensor(image_features).cuda()
