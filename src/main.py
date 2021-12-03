@@ -111,6 +111,7 @@ def get_accuracy(names, langs=['en','it']):
     method = 'csls_knn_10'
     DIC_EVAL_PATH = '../dicts/texts/'
     dico_eval = os.path.join(DIC_EVAL_PATH, '{}_{}_{}_test.txt'.format(names['data'], langs[0], langs[1]))
+    print(dico_eval)
     results = get_word_translation_accuracy(langs[0], word2ids[0], embs[0], langs[1], word2ids[1], embs[1], method, dico_eval)
     print(results)
 
