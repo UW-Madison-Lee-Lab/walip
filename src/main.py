@@ -190,14 +190,14 @@ def supervised(names, langs):
 if __name__ == '__main__':
     names = {'data': 'noun', 'image': 'cifar100'}
     langs = ['en', 'it']
-    get_accuracy(names, langs)
+    # get_accuracy(names, langs)
     # translate(names, langs)
     # supervised(names, langs)
-    # vocabs, translation = load_data_from_two_files(names['data'], langs, 'test')
-    # f= open('../dicts/texts/noun_en_it_test.txt', "w") 
-    # for i in range(len(vocabs[0])):
-    #     f.write("{} {}\n".format(vocabs[0][i], vocabs[1][i]))
-    # f.close()
+    vocabs, translation = load_data_from_two_files(names['data'], langs, 'test')
+    f= open('../dicts/texts/noun_en_it_test.txt', "w") 
+    for i in range(len(vocabs[0])):
+        f.write("{} {}\n".format(vocabs[0][i], vocabs[1][i]))
+    f.close()
 
 
    
