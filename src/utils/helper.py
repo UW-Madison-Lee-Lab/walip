@@ -1,5 +1,5 @@
-
 from matplotlib import pyplot as plt
+from torchvision.utils import save_image
 
 def plotW(score, name):
     plt.imshow(score)
@@ -7,8 +7,11 @@ def plotW(score, name):
     plt.savefig('../results/W_{}.png'.format(name))
     plt.close()
 
-
-
+def save_images(samples, save_path, nrows=0):
+    if nrows == 0:
+        bs = samples.shape[0]
+        nrows = int(bs**.5)
+    save_image(samples.cpu(), save_path, nrow=nrows, normalize=True)
 
 class AverageMeter(object):
     def __init__(self):
@@ -51,7 +54,7 @@ def get_accuracy(vocabs, translation, col_ind):
         if vocabs[1][col_ind[i]] in translation[vocabs[0][i]]:
             s+=1
         else:
-            print(i, ':', col_ind[i], vocabs[0][i], vocabs[1][col_ind[i]])
+            print(i, '->', col_ind[i], vocabs[0][i], '->', vocabs[0][col_ind[i]])
     acc = s/len(vocabs[0]) * 100
     print('Accuracy: {:.4f}'.format(acc))
     return acc

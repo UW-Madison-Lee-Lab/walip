@@ -33,5 +33,16 @@ emb_prefix = '../dicts/npy/embeddings/'
 
 text_dir_path = '../dicts/texts/'
 
-num_images = 1
+num_images = 5
 num_prompts = 1
+
+flags = {
+	"reuse_fp_embedding": False,
+	"reuse_image_embedding": False, 
+	"reuse_image_data": False,
+	"using_filtered_images": False,
+	"reuse_text_embedding": True, 
+}
+
+langs = {'src': 'en', 'tgt': 'it'}
+

@@ -47,7 +47,7 @@ def linear_assigment(embs):
 def nearest_neighbor(embs):
     y = embs[0] @ embs[1].T 
     x = np.argmax(y, axis=1)
-    return x
+    return x, y
 
 def supervised(names, langs):
     def train(embs, vocabs, translation):

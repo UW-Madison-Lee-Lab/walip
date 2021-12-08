@@ -1,11 +1,13 @@
 import os, torch
-from models.uwt import linear_assigment
+import numpy as np
+from models.uwt import linear_assigment, nearest_neighbor
 from evals.word_translation import get_csls_word_translation, get_topk_translation_accuracy, load_dictionary
 from utils.helper import get_accuracy
 from utils.loader import get_word2id
 from utils.loader import load_vocab_translation
 from models.ops import load_embedding
 import argparse
+import configs
 
 os.environ['TOKENIZERS_PARALLELISM'] = "false"
 
@@ -29,6 +31,8 @@ params = parser.parse_args()
         
 
 mode = params.test
+configs.langs['src'] = params.src_lang
+configs.langs['tgt'] = params.tgt_lang
 
 # prepare embedding
 vocabs, translation = load_vocab_translation(params.word_data, [params.src_lang, params.tgt_lang], mode)
@@ -36,7 +40,7 @@ embs = {}
 for i, lang in enumerate([params.src_lang, params.tgt_lang]):
     embs[i] = load_embedding(params.emb_type, params.word_data, params.image_data, lang, vocabs[i], mode)
 
-print('Eval ', params.method, 'with', params.emb_type)
+print('Eval', params.word_data, 'with', params.method, params.emb_type)
 # perform translation
 if params.method in ['nn', 'csls_knn_10']:
     # test data
@@ -55,3 +59,8 @@ elif params.method == 'matching':
     col_ind = linear_assigment(embs)
     acc = get_accuracy(vocabs, translation, col_ind)
     print(acc)
+elif params.method == '1nn':
+    col_ind, scores = nearest_neighbor(embs)
+    acc = get_accuracy(vocabs, translation, col_ind)
+    print(acc)
+    from IPython import embed; embed()

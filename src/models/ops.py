@@ -5,6 +5,7 @@ from funcy import chunks
 from tqdm import tqdm
 import configs
 from utils.loader import load_image_data
+from utils.helper import save_images
 from models.prompt_templates import prompts, generate_texts
 from models.clip_italian import get_italian_models
 
@@ -12,18 +13,19 @@ from models.clip_italian import get_italian_models
 def get_clip_based_image_embedding(img_data_name, model_params):
     is_eng_clip, model = model_params
     image_feature_path = configs.image_feature_prefix + '{}_en{}_k{}.npy'.format(img_data_name, int(is_eng_clip), configs.num_images)
-    if os.path.isfile(image_feature_path):
+    if os.path.isfile(image_feature_path) and configs.flags["reuse_image_embedding"]:
         image_features = np.load(image_feature_path, allow_pickle=True)
         image_features = torch.Tensor(image_features).cuda()
     else:
         assert model is not None
         image_path = configs.image_prefix + '{}_k{}.npy'.format(img_data_name, configs.num_images)
-        if os.path.isfile(image_path):
+        if os.path.isfile(image_path) and configs.flags["reuse_image_data"]: 
             images = np.load(image_path, allow_pickle=True)
         else:
             images = load_image_data(img_data_name)
             np.save(image_path, images)
         images = torch.Tensor(images)
+        save_images(images, '../results/base_images.png', nrows=10)
         with torch.no_grad():
             if is_eng_clip:
                 image_features = model.encode_image(images.cuda()).float()
@@ -55,7 +57,7 @@ def get_batch_clip_based_text_features(text_params, model_params):
 
 def get_clip_based_text_embedding(txt_data_name, model_params, vocab, lang, mode):
     emb_path = configs.text_prefix + 'cliptext_{}_{}_{}.npy'.format(txt_data_name, lang, mode)
-    if os.path.isfile(emb_path):
+    if os.path.isfile(emb_path) and configs.flags["reuse_text_embedding"]:
         print('load ', emb_path)
         lang_embs = np.load(emb_path, allow_pickle=True)
     else:
@@ -76,24 +78,16 @@ def get_clip_based_text_embedding(txt_data_name, model_params, vocab, lang, mode
 
 def get_fingerprint_embedding(image_features, text_features, logit_scale=1.0):
     # logits_per_image = logit_scale * image_features @ text_features.t()
-    txt_logits = logit_scale * (text_features @ image_features.t())
-    probs = txt_logits.softmax(dim=-1).cpu().detach().numpy()
+    txt_logits = text_features @ image_features.t()
+    if configs.num_images > 1:
+        K, D = configs.num_images, image_features.shape[0] // configs.num_images
+        txt_logits = txt_logits.view(-1, D, K)
+        txt_logits = txt_logits.mean(dim=-1)
+    probs = (logit_scale * txt_logits).softmax(dim=-1).cpu().detach().numpy()
     return probs
 
 
-def load_embedding(emb_type, txt_data_name, img_data_name, lang, vocab=None, mode='test'):
-    if emb_type == 'fp':
-        emb_path = configs.emb_prefix + '{}_{}_{}_{}_{}.npy'.format(emb_type, img_data_name, txt_data_name, lang, mode)
-    else:
-        emb_path = configs.emb_prefix + '{}_{}_{}_{}.npy'.format(emb_type, txt_data_name, lang, mode)
-    if os.path.isfile(emb_path):
-        print('load ', emb_path)
-        emb = np.load(emb_path, allow_pickle=True)
-        return emb
-    elif emb_type == 'fasttest':
-        print("Miss the fast-text embedding")
-        return -1
-
+def load_models(lang):
     # load models
     if lang == 'en':
         is_eng_clip = True
@@ -107,7 +101,22 @@ def load_embedding(emb_type, txt_data_name, img_data_name, lang, vocab=None, mod
         # text_model.eval()
         image_model, text_model = get_italian_models()
         logit_scale = 1.0
+    return is_eng_clip, image_model, text_model, logit_scale
 
+def load_embedding(emb_type, txt_data_name, img_data_name, lang, vocab=None, mode='test'):
+    if emb_type == 'fp':
+        emb_path = configs.emb_prefix + '{}_{}_{}_{}_{}.npy'.format(emb_type, img_data_name, txt_data_name, lang, mode)
+    else:
+        emb_path = configs.emb_prefix + '{}_{}_{}_{}.npy'.format(emb_type, txt_data_name, lang, mode)
+    if os.path.isfile(emb_path) and configs.flags["reuse_fp_embedding"]:
+        print('load ', emb_path)
+        emb = np.load(emb_path, allow_pickle=True)
+        return emb
+    elif emb_type == 'fasttest':
+        print("Miss the fast-text embedding")
+        return -1
+
+    is_eng_clip, image_model, text_model, logit_scale = load_models(lang)
     if emb_type == 'fp':
         img_model_params = (is_eng_clip, image_model)
         txt_model_params = (is_eng_clip, text_model)
