@@ -7,7 +7,7 @@ import configs
 
     
 def load_vocabs(data_name, lang, mode):
-    fpath = configs.text_dir_path + '{}/{}_{}.txt'.format(data_name, data_name, lang, mode)
+    fpath = configs.text_dir_path + '{}/{}_{}_{}.txt'.format(data_name, data_name, lang, mode)
     with open(fpath) as f:
         lines = f.readlines()
     vocabs = [] # order
@@ -64,19 +64,9 @@ def load_data_from_one_file(data_name, langs, mode):
     #     vocabs[i] = list(vocabs[i])
     return vocabs, translation
 
-
-
-
-
-
-
-
-
 def load_vocab_translation(txt_data_name, langs, mode):
     vocabs, translation = load_data_from_one_file(txt_data_name, langs, mode)
     return vocabs, translation
-
-
 
 def get_word2id(vocabs):
     assert len(vocabs) == 2
@@ -86,13 +76,7 @@ def get_word2id(vocabs):
             word2ids[k][vocabs[k][i]] = i
     return word2ids
 
-
-
-def load_image_data(image_name, with_index=False):
-    
-    num_images = configs.num_images
-    num_classes = configs.num_classes[image_name]
-
+def load_image_dataset(image_name):
     preprocess = transforms.Compose([
         Resize([224], interpolation=InterpolationMode.BICUBIC),
         CenterCrop(224),
@@ -117,9 +101,15 @@ def load_image_data(image_name, with_index=False):
         from torchvision.datasets import ImageFolder
         data_dir = '../../repgan/data/imagenet/val'
         image_dataset = ImageFolder(data_dir, preprocess)
+    return image_dataset
 
-    if with_index:
-        fpath = '../dicts/npy/images/{}_correct_index.npy'.format(image_name)
+def load_image_data(image_name):
+    num_images = configs.num_images
+    num_classes = configs.num_classes[image_name]
+    image_dataset = load_image_dataset(image_name)
+
+    if configs.flags["using_filtered_images"]:
+        fpath = '../dicts/images/{}_{}_{}_index.npy'.format(image_name, configs.langs['src'], configs.langs['tgt'])
         if os.path.isfile(fpath):
             dct = np.load(fpath, allow_pickle=True).item()
             indices = list(dct.values())

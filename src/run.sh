@@ -1,3 +1,1 @@
-
-
-python main.py -e fp -i cifar10 -w cifar10 -m matching
+python main.py -e fp -i cifar100 -w cifar100 -m 1nn -t val
