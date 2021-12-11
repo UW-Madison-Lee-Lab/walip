@@ -26,20 +26,17 @@ num_classes = {
 	'imagenet': 1000
 }
 
-image_feature_prefix = '../dicts/npy/images/image_feature_'
-image_prefix = '../dicts/npy/images/image_'
-text_prefix = '../dicts/npy/embeddings/'
-emb_prefix = '../dicts/npy/embeddings/'
+paths = {}
 
-text_dir_path = '../dicts/texts/'
+one_word = True
 
-num_images = 5
+num_images = 100
 num_prompts = 1
 
 flags = {
-	"reuse_fp_embedding": False,
-	"reuse_image_embedding": False, 
-	"reuse_image_data": False,
+	"reuse_fp_embedding": True,
+	"reuse_image_embedding": True, 
+	"reuse_image_data": True,
 	"using_filtered_images": False,
 	"reuse_text_embedding": True, 
 }

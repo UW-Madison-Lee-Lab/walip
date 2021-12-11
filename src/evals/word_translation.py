@@ -131,28 +131,27 @@ def load_dictionary(path, word2id1, word2id2):
     return dico
 
 
-def get_csls_word_translation(dico, embs, method='csls_knn_10'):
+def get_csls_word_translation(dico, emb1, emb2, sim_score='csls'):
     """
     Given source and target word embeddings, and a dictionary,
     evaluate the translation accuracy using the precision@k.
     """
-    emb1, emb2 = embs[0], embs[1]
     # dico = dico.cuda() if embs[0].is_cuda else dico
     # normalize word embeddings
     # emb1 = emb1 / emb1.norm(2, 1, keepdim=True).expand_as(emb1)
     # emb2 = emb2 / emb2.norm(2, 1, keepdim=True).expand_as(emb2)
 
     # nearest neighbors
-    if method == 'nn':
+    if sim_score == 'cosine':
         query = emb1[dico[:, 0]]
         scores = query.mm(emb2.transpose(0, 1))
 
     # contextual dissimilarity measure
-    elif method.startswith('csls_knn_'):
+    elif sim_score.startswith('csls'):
         # average distances to k nearest neighbors
-        knn = method[len('csls_knn_'):]
-        assert knn.isdigit()
-        knn = int(knn)
+        knn = 10 #method[len('csls_knn_'):]
+        # assert knn.isdigit()
+        # knn = int(knn)
         average_dist1 = get_nn_avg_dist(emb2, emb1, knn)
         average_dist2 = get_nn_avg_dist(emb1, emb2, knn)
         average_dist1 = torch.from_numpy(average_dist1).type_as(emb1)
@@ -165,12 +164,12 @@ def get_csls_word_translation(dico, embs, method='csls_knn_10'):
         scores.sub_(average_dist2[None, :])
 
     else:
-        raise Exception('Unknown method: "%s"' % method)
+        raise Exception('Unknown method: "%s"' % sim_score)
 
     return scores
 
 
-def get_topk_translation_accuracy(scores, dico):
+def get_topk_translation_accuracy(dico, scores):
     results = []
     top_matches = scores.topk(10, 1, True)[1]
     for k in [1, 5, 10]:
@@ -184,7 +183,7 @@ def get_topk_translation_accuracy(scores, dico):
         precision_at_k = 100 * np.mean(list(matching.values()))
         # logger.info("%i source words - %s - Precision at k = %i: %f" %
                     # (len(matching), method, k, precision_at_k))
-        results.append(('precision_at_%i' % k, precision_at_k))
+        results.append('prec_@{}: {:.2f}'.format(k, precision_at_k))
     return results
 
 def read_txt_embeddings(lang, emb_path, emb_dim=300, full_vocab=False):

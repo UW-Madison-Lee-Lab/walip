@@ -12,13 +12,13 @@ from models.clip_italian import get_italian_models
 
 def get_clip_based_image_embedding(img_data_name, model_params):
     is_eng_clip, model = model_params
-    image_feature_path = configs.image_feature_prefix + '{}_en{}_k{}.npy'.format(img_data_name, int(is_eng_clip), configs.num_images)
+    image_feature_path = configs.paths['img_dir'] + 'image_feature_{}_en{}_k{}.npy'.format(img_data_name, int(is_eng_clip), configs.num_images)
     if os.path.isfile(image_feature_path) and configs.flags["reuse_image_embedding"]:
         image_features = np.load(image_feature_path, allow_pickle=True)
         image_features = torch.Tensor(image_features).cuda()
     else:
         assert model is not None
-        image_path = configs.image_prefix + '{}_k{}.npy'.format(img_data_name, configs.num_images)
+        image_path = configs.paths['img_dir'] + 'image_{}_k{}.npy'.format(img_data_name, configs.num_images)
         if os.path.isfile(image_path) and configs.flags["reuse_image_data"]: 
             images = np.load(image_path, allow_pickle=True)
         else:
@@ -56,7 +56,7 @@ def get_batch_clip_based_text_features(text_params, model_params):
     return text_features
 
 def get_clip_based_text_embedding(txt_data_name, model_params, vocab, lang, mode):
-    emb_path = configs.text_prefix + 'cliptext_{}_{}_{}.npy'.format(txt_data_name, lang, mode)
+    emb_path = configs.paths['emb_dir'] + 'cliptext_{}_{}_{}.npy'.format(txt_data_name, lang, mode)
     if os.path.isfile(emb_path) and configs.flags["reuse_text_embedding"]:
         print('load ', emb_path)
         lang_embs = np.load(emb_path, allow_pickle=True)
@@ -105,14 +105,15 @@ def load_models(lang):
 
 def load_embedding(emb_type, txt_data_name, img_data_name, lang, vocab=None, mode='test'):
     if emb_type == 'fp':
-        emb_path = configs.emb_prefix + '{}_{}_{}_{}_{}.npy'.format(emb_type, img_data_name, txt_data_name, lang, mode)
+        fname = '{}_{}_{}_{}_{}.npy'.format(emb_type, img_data_name, txt_data_name, lang, mode)
     else:
-        emb_path = configs.emb_prefix + '{}_{}_{}_{}.npy'.format(emb_type, txt_data_name, lang, mode)
+        fname = '{}_{}_{}_{}.npy'.format(emb_type, txt_data_name, lang, mode)
+    emb_path = configs.paths['emb_dir'] + fname
     if os.path.isfile(emb_path) and configs.flags["reuse_fp_embedding"]:
         print('load ', emb_path)
         emb = np.load(emb_path, allow_pickle=True)
         return emb
-    elif emb_type == 'fasttest':
+    elif emb_type == 'fasttext':
         print("Miss the fast-text embedding")
         return -1
 

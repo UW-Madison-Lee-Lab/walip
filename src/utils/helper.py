@@ -47,14 +47,15 @@ def accuracy(output, target, topk=(1,)):
     return res
 
 
-def get_accuracy(vocabs, translation, col_ind):
-    assert len(vocabs) == 2
+def get_accuracy(dico, col_ind):
     s = 0
-    for i in range(len(vocabs[0])):
-        if vocabs[1][col_ind[i]] in translation[vocabs[0][i]]:
+    wrong_pairs = []
+    for i in range(dico.shape[0]):
+        if col_ind[i] == dico[i, 1]:
             s+=1
         else:
-            print(i, '->', col_ind[i], vocabs[0][i], '->', vocabs[0][col_ind[i]])
-    acc = s/len(vocabs[0]) * 100
+            wrong_pairs.append([i, col_ind[i], dico[i, 1]])
+            # print(i, '->', col_ind[i], vocabs[0][i], '->', vocabs[0][col_ind[i]])
+    acc = s/dico.shape[0] * 100
     print('Accuracy: {:.4f}'.format(acc))
-    return acc
+    return acc, wrong_pairs

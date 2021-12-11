@@ -7,7 +7,7 @@ import configs
 
     
 def load_vocabs(data_name, lang, mode):
-    fpath = configs.text_dir_path + '{}/{}_{}_{}.txt'.format(data_name, data_name, lang, mode)
+    fpath = configs.paths['txt_dir']+ '{}_{}_{}.txt'.format(data_name, lang, mode)
     with open(fpath) as f:
         lines = f.readlines()
     vocabs = [] # order
@@ -21,7 +21,7 @@ def load_data_from_two_files(data_name, langs, mode):
     translation = {}
     lines = []
     for lang in langs:
-        fpath = configs.text_dir_path + '{}/{}_{}_{}.txt'.format(data_name, data_name, lang, mode)
+        fpath = configs.paths['txt_dir']  + '{}_{}_{}.txt'.format(data_name, lang, mode)
         with open(fpath) as f:
             lines.append(f.readlines())
 
@@ -30,12 +30,16 @@ def load_data_from_two_files(data_name, langs, mode):
         y = y.strip().lower()
         vocabs[0].append(x)
         vocabs[1].append(y)
-        translation[x] = [y]
+        if x in translation:
+            # pass
+            translation[x].append(y)
+        else:
+            translation[x] = [y]
     return vocabs, translation
 
 def combine_files(data_name, langs, mode):
     vocabs, _ = load_data_from_two_files(data_name, langs, mode)
-    fpath = configs.text_dir_path + '{}/{}_{}_{}_{}.txt'.format(data_name, data_name, langs[0], langs[1], mode)
+    fpath = configs.paths['txt_dir'] + '{}_{}_{}_{}.txt'.format(data_name, langs[0], langs[1], mode)
     f= open(fpath, "w") 
     for i in range(len(vocabs[0])):
         f.write("{} {}\n".format(vocabs[0][i], vocabs[1][i]))
@@ -43,7 +47,7 @@ def combine_files(data_name, langs, mode):
     print('Done combining')
 
 def load_data_from_one_file(data_name, langs, mode):
-    fpath = configs.text_dir_path + '{}/{}_{}_{}_{}.txt'.format(data_name, data_name, langs[0], langs[1], mode)
+    fpath = configs.paths['txt_dir'] + '{}_{}_{}_{}.txt'.format(data_name, langs[0], langs[1], mode)
     if not os.path.isfile(fpath):
         combine_files(data_name, langs, mode)
     vocabs = [[], []]
@@ -65,16 +69,16 @@ def load_data_from_one_file(data_name, langs, mode):
     return vocabs, translation
 
 def load_vocab_translation(txt_data_name, langs, mode):
-    vocabs, translation = load_data_from_one_file(txt_data_name, langs, mode)
-    return vocabs, translation
+    if configs.one_word:
+        return load_data_from_one_file(txt_data_name, langs, mode)
+    else:
+        return load_data_from_two_files(txt_data_name, langs, mode)
 
-def get_word2id(vocabs):
-    assert len(vocabs) == 2
-    word2ids = {0:{}, 1:{}}
-    for k in range(2):
-        for i in range(len(vocabs[k])):
-            word2ids[k][vocabs[k][i]] = i
-    return word2ids
+def get_word2id(vocab):
+    word2id = {}
+    for i in range(len(vocab)):
+        word2id[vocab[i]] = i
+    return word2id
 
 def load_image_dataset(image_name):
     preprocess = transforms.Compose([
@@ -109,13 +113,13 @@ def load_image_data(image_name):
     image_dataset = load_image_dataset(image_name)
 
     if configs.flags["using_filtered_images"]:
-        fpath = '../dicts/images/{}_{}_{}_index.npy'.format(image_name, configs.langs['src'], configs.langs['tgt'])
+        fpath = configs.paths['img_dir']  + '{}_{}_{}_index.npy'.format(image_name, configs.langs['src'], configs.langs['tgt'])
         if os.path.isfile(fpath):
             dct = np.load(fpath, allow_pickle=True).item()
             indices = list(dct.values())
             images = [image_dataset[idx][0] for idx in indices]
         else:
-            with open('../dicts/images/{}_index.txt'.format(image_name)) as f:
+            with open(configs.paths['img_dir'] + image_name + '_index.txt') as f:
                 lines = f.readlines()
             d = {}
             for l in lines:
