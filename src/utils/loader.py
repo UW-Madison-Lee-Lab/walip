@@ -5,20 +5,9 @@ import os
 import numpy as np
 import configs
 
-    
-def load_vocabs(data_name, lang, mode):
-    fpath = configs.paths['txt_dir']+ '{}_{}_{}.txt'.format(data_name, lang, mode)
-    with open(fpath) as f:
-        lines = f.readlines()
-    vocabs = [] # order
-    for desc in lines:
-        desc = desc.strip().lower()
-        vocabs.append(desc)
-    return vocabs
 
 def load_data_from_two_files(data_name, langs, mode):
-    vocabs = [[], []]
-    translation = {}
+    vocabs = {}
     lines = []
     for lang in langs:
         fpath = configs.paths['txt_dir']  + '{}_{}_{}.txt'.format(data_name, lang, mode)
@@ -28,14 +17,14 @@ def load_data_from_two_files(data_name, langs, mode):
     for (x, y) in zip(lines[0], lines[1]):
         x = x.strip().lower()
         y = y.strip().lower()
-        vocabs[0].append(x)
-        vocabs[1].append(y)
-        if x in translation:
-            # pass
-            translation[x].append(y)
-        else:
-            translation[x] = [y]
-    return vocabs, translation
+        vocabs[langs[0]].append(x)
+        vocabs[langs[1]].append(y)
+    return vocabs
+
+
+
+
+
 
 def combine_files(data_name, langs, mode):
     vocabs, _ = load_data_from_two_files(data_name, langs, mode)
@@ -50,23 +39,32 @@ def load_data_from_one_file(data_name, langs, mode):
     fpath = configs.paths['txt_dir'] + '{}_{}_{}_{}.txt'.format(data_name, langs[0], langs[1], mode)
     if not os.path.isfile(fpath):
         combine_files(data_name, langs, mode)
-    vocabs = [[], []]
-    translation = {}
+    vocabs = {langs[0]:[], langs[1]: []}
     with open(fpath) as f:
         lines = f.readlines()
 
     for l in lines:
         x, y = l.strip().lower().split(' ')
-        vocabs[0].append(x)
-        vocabs[1].append(y)
-        if x in translation:
-            # pass
-            translation[x].append(y)
-        else:
-            translation[x] = [y]
-    # for i in range(2):
-    #     vocabs[i] = list(vocabs[i])
-    return vocabs, translation
+        vocabs[langs[0]].append(x)
+        vocabs[langs[1]].append(y)
+    return vocabs
+
+def load_vocabs(data_name, lang, mode):
+    fpath = configs.paths['txt_dir']+ '{}_{}_{}.txt'.format(data_name, lang, mode)
+    if not os.path.isfile(fpath):
+        vocabs = load_data_from_one_file(data_name, ['en', 'it'], mode)
+        f= open(fpath, "w") 
+        for i in range(len(vocabs[lang])):
+            f.write("{}\n".format(vocabs[lang][i]))
+        f.close()
+        return vocabs[lang]
+    with open(fpath) as f:
+        lines = f.readlines()
+    vocabs = [] # order
+    for desc in lines:
+        desc = desc.strip().lower()
+        vocabs.append(desc)
+    return vocabs
 
 def load_vocab_translation(txt_data_name, langs, mode):
     if configs.one_word:

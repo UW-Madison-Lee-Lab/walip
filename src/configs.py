@@ -37,7 +37,7 @@ flags = {
 	"reuse_fp_embedding": True,
 	"reuse_image_embedding": True, 
 	"reuse_image_data": True,
-	"using_filtered_images": False,
+	"using_filtered_images": True,
 	"reuse_text_embedding": True, 
 }
 
