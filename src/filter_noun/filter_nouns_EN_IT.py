@@ -90,6 +90,7 @@ for idx, (word, tag) in enumerate(nltk.pos_tag(en_train_list)):
 	if tag in target_tags:
 		train_noun_idx.append(idx)
 '''
+
 train_noun_idx = [idx for idx, (word, tag) in enumerate(nltk.pos_tag(en_train_list)) if tag in target_tags]
 en_train_noun = [en_train_list[idx] for idx in train_noun_idx]
 it_train_noun = [it_train_list[idx] for idx in train_noun_idx]
