@@ -19,6 +19,7 @@ stds = {
 }
 
 
+
 num_classes = {
 	'cifar10': 10,
 	'cifar100': 100,
@@ -26,20 +27,28 @@ num_classes = {
 	'imagenet': 1000
 }
 
+delimiters = {
+	'cifar10': ' ',
+	'cifar100': ' ',
+	'noun': ' ',
+	'imagenet': ' | ',
+	'composite': ' | '
+}
+
 paths = {}
 
-one_word = True
+one_word = False
 
-num_images = 100
+num_images = 1
 num_prompts = 1
 
 flags = {
-	"reuse_fp_embedding": True,
-	"reuse_image_embedding": True, 
-	"reuse_image_data": True,
+	"reuse_fp_embedding": False,
+	"reuse_image_embedding": False, 
+	"reuse_image_data": False,
 	"using_filtered_images": True,
 	"reuse_text_embedding": True, 
 }
 
 langs = {'src': 'en', 'tgt': 'it'}
-
+image_batchsizes = {'imagenet':32, 'cifar100': 128, 'cifar10':128}

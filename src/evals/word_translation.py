@@ -87,7 +87,7 @@ def load_identical_char_dico(word2id1, word2id2):
     return dico
 
 
-def load_dictionary(path, word2id1, word2id2):
+def load_dictionary(path, word2id1, word2id2, delimiter=None):
     """
     Return a torch tensor of size (n, 2) where n is the size of the
     loader dictionary, and sort it by source word frequency.
@@ -103,7 +103,10 @@ def load_dictionary(path, word2id1, word2id2):
         for index, line in enumerate(f):
             # assert line == line.lower()
             line = line.lower()
-            parts = line.rstrip().split()
+            if delimiter is not None:
+                parts = line.rstrip().split(delimiter)
+            else:
+                parts = line.rstrip().split()
             if len(parts) < 2:
                 logger.warning("Could not parse line %s (%i)", line, index)
                 continue

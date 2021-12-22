@@ -3,7 +3,7 @@ import numpy as np
 import scipy
 from evals.word_translation import get_csls_word_translation, get_topk_translation_accuracy, load_dictionary
 from utils.helper import get_accuracy
-from utils.loader import get_word2id, load_vocabs
+from utils.loader import get_word2id, load_vocabs, combine_files
 from models.ops import load_embedding
 import argparse
 import configs
@@ -56,14 +56,23 @@ def prepare_embeddings(params):
 
 
 process_configs(params)
+print(" Prepare embedding")
 word2ids, embs = prepare_embeddings(params)
-test_fpath = configs.paths['txt_dir'] + '{}_{}_{}_{}.txt'.format(params.word_data, \
-    params.src_lang, params.tgt_lang, 'test')
-dico = load_dictionary(test_fpath, word2ids['src'], word2ids['tgt'])
+test_fpath = configs.paths['txt_dir'] + f'{params.word_data}_{params.src_lang}_{params.tgt_lang}_test.txt'
+if not os.path.isfile(test_fpath):
+    combine_files(params.word_data, [params.src_lang, params.tgt_lang], 'test')
+dico = load_dictionary(test_fpath, word2ids['src'], word2ids['tgt'], delimiter=configs.delimiters[params.word_data])
 dico = dico.cuda()
 for s in ['src', 'tgt']:
     embs[s] = torch.from_numpy(embs[s]).cuda()
     # assert dico[:, i].max() < embs[s].size(0)
+
+# decorrelate
+if params.emb_type == 'cliptext':
+    W = scipy.stats.ortho_group.rvs(embs['src'].shape[1])
+    W = torch.from_numpy(W).type(torch.FloatTensor).cuda()
+    embs['src'] = embs['src'] @ W.T
+
 print('==== Eval', params.word_data, ':', params.emb_type, params.sim_score, params.matching_method)
 if params.learning_mode == 'supervised':
     def train_supervision(X1, X2):

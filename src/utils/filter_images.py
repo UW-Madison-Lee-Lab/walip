@@ -9,16 +9,15 @@ from torch.utils.data import DataLoader
 from utils.loader import load_vocabs, load_image_dataset
 from models.ops import get_batch_clip_based_text_features, load_models
 from models.prompt_templates import prompts, generate_texts
+from tqdm import tqdm
 
 import configs
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-image_dir = '../dicts/images/'
-
 def find_correct_images(lang, image_name):
     nclasses = configs.num_classes[image_name]
-    bs = {'imagenet':32, 'cifar100': 128, 'cifar10':128}[image_name]
+    bs = configs.image_batchsizes[image_name]
 
     vocab = load_vocabs(image_name, lang, mode='full')	
     template_size = configs.num_prompts
@@ -32,9 +31,10 @@ def find_correct_images(lang, image_name):
     indices = {}
     s = 0
     total = 0
-    for batch_idx, (inputs, labels) in enumerate(dataloader):
-        targets = Variable(labels).long().cuda()
-        images = Variable(inputs)
+    tqdm_object = tqdm(dataloader, total=len(dataloader))
+    batch_idx = 0
+    for (images, labels) in tqdm_object:
+        targets = labels.long().cuda()
         with torch.no_grad():
             if is_eng_clip:
                 image_features = image_model.encode_image(images.cuda()).float()
@@ -48,16 +48,16 @@ def find_correct_images(lang, image_name):
         correct = pred.eq(targets.view(1, -1).expand_as(pred))
         correct = correct[0]
         s += correct.sum()
-        total += inputs.shape[0]
+        total += targets.shape[0]
         inds = np.where(correct.cpu().numpy() == True)[0]
         for x in inds:
             t = labels[x].item()
             if t not in indices:
                 indices[t] = []
             indices[t].append(x + batch_idx * bs)
-        
+        batch_idx += 1
 
-    fname = os.path.join(image_dir, '{}_{}_correct_index'.format(image_name, lang))
+    fname = os.path.join(configs.paths['img_dir'], f'{image_name}_{lang}_correct_index')
     np.save(fname, indices)
     f = open(fname + ".txt", 'w')
     for i in range(nclasses):
@@ -77,7 +77,7 @@ def find_interesection(data_name, langs=['en', 'it']):
 
     indices = []
     for l in langs:
-        fpath = os.path.join(image_dir, '{}_{}_correct_index.npy'.format(data_name, l))
+        fpath = os.path.join(configs.paths['img_dir'], '{}_{}_correct_index.npy'.format(data_name, l))
         indices.append(np.load(fpath, allow_pickle=True).item())
 
     keys = intersect(list(indices[0].keys()), list(indices[1].keys()))
@@ -88,7 +88,7 @@ def find_interesection(data_name, langs=['en', 'it']):
             ans[k] = values[0]
         else:
             print(k) # 36
-    fname = os.path.join(image_dir, '{}_{}_{}_index'.format(data_name, langs[0], langs[1]))
+    fname = os.path.join(configs.paths['img_dir'], '{}_{}_{}_index'.format(data_name, langs[0], langs[1]))
     np.save(fname, ans)
     f = open(fname + ".txt", 'w')
     # image_dataset.classes[0]

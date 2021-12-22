@@ -12,20 +12,22 @@ from models.clip_italian import get_italian_models
 
 def get_clip_based_image_embedding(img_data_name, model_params):
     is_eng_clip, model = model_params
-    image_feature_path = configs.paths['img_dir'] + 'image_feature_{}_en{}_k{}.npy'.format(img_data_name, int(is_eng_clip), configs.num_images)
+    image_feature_path = configs.paths['img_dir'] + f'image_feature_{img_data_name}_{configs.flags["using_filtered_images"]}_en{int(is_eng_clip)}_k{configs.num_images}.npy'
+
+    print(" Load the image embedding: " + image_feature_path)
     if os.path.isfile(image_feature_path) and configs.flags["reuse_image_embedding"]:
         image_features = np.load(image_feature_path, allow_pickle=True)
         image_features = torch.Tensor(image_features).cuda()
     else:
         assert model is not None
-        image_path = configs.paths['img_dir'] + 'image_{}_k{}.npy'.format(img_data_name, configs.num_images)
+        image_path = configs.paths['img_dir'] + f'image_{img_data_name}_{configs.flags["using_filtered_images"]}_k{configs.num_images}.npy'
         if os.path.isfile(image_path) and configs.flags["reuse_image_data"]: 
             images = np.load(image_path, allow_pickle=True)
         else:
             images = load_image_data(img_data_name)
             np.save(image_path, images)
         images = torch.Tensor(images)
-        save_images(images, '../results/base_images.png', nrows=10)
+        save_images(images, f'../results/base_images_{configs.flags["using_filtered_images"]}.png', nrows=10)
         with torch.no_grad():
             if is_eng_clip:
                 image_features = model.encode_image(images.cuda()).float()
@@ -57,6 +59,7 @@ def get_batch_clip_based_text_features(text_params, model_params):
 
 def get_clip_based_text_embedding(txt_data_name, model_params, vocab, lang, mode):
     emb_path = configs.paths['emb_dir'] + 'cliptext_{}_{}_{}.npy'.format(txt_data_name, lang, mode)
+    print(" Load the image embedding: " + emb_path)
     if os.path.isfile(emb_path) and configs.flags["reuse_text_embedding"]:
         print('load ', emb_path)
         lang_embs = np.load(emb_path, allow_pickle=True)
@@ -105,9 +108,10 @@ def load_models(lang):
 
 def load_embedding(emb_type, txt_data_name, img_data_name, lang, vocab=None, mode='test'):
     if emb_type == 'fp':
-        fname = '{}_{}_{}_{}_{}.npy'.format(emb_type, img_data_name, txt_data_name, lang, mode)
+        fname = f'{emb_type}_{img_data_name}_{configs.flags["using_filtered_images"]}_{txt_data_name}_{lang}_{mode}.npy'
     else:
-        fname = '{}_{}_{}_{}.npy'.format(emb_type, txt_data_name, lang, mode)
+        fname = f'{emb_type}_{txt_data_name}_{lang}_{mode}.npy'
+    print(" Load embedding: " + fname)
     emb_path = configs.paths['emb_dir'] + fname
     if os.path.isfile(emb_path) and configs.flags["reuse_fp_embedding"]:
         print('load ', emb_path)
