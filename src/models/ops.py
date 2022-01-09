@@ -79,7 +79,7 @@ def get_clip_based_text_embedding(txt_data_name, model_params, vocab, lang, mode
         np.save(emb_path, lang_embs) 
     return lang_embs
 
-def get_fingerprint_embedding(image_features, text_features, logit_scale=1.0):
+def get_fingerprint_embedding(image_features, text_features, logit_scale):
     # logits_per_image = logit_scale * image_features @ text_features.t()
     txt_logits = text_features @ image_features.t()
     if configs.num_images > 1:
@@ -103,7 +103,7 @@ def load_models(lang):
         # text_model = multilingual_clip.load_model('M-BERT-Base-ViT-B')
         # text_model.eval()
         image_model, text_model = get_italian_models()
-        logit_scale = 1.0
+        logit_scale = 20.0
     return is_eng_clip, image_model, text_model, logit_scale
 
 def load_embedding(emb_type, txt_data_name, img_data_name, lang, vocab=None, mode='test'):

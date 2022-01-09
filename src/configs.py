@@ -44,10 +44,10 @@ num_prompts = 1
 
 flags = {
 	"reuse_fp_embedding": False,
-	"reuse_image_embedding": False, 
-	"reuse_image_data": False,
+	"reuse_image_embedding": True, 
+	"reuse_image_data": True,
 	"using_filtered_images": True,
-	"reuse_text_embedding": True, 
+	"reuse_text_embedding": False, 
 }
 
 langs = {'src': 'en', 'tgt': 'it'}
