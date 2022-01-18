@@ -1,6 +1,9 @@
 import os, torch
 import numpy as np
 import scipy
+from scipy import stats, optimize, interpolate
+import scipy.stats
+import scipy.optimize
 from evals.word_translation import get_csls_word_translation, get_topk_translation_accuracy, load_dictionary
 from utils.helper import get_accuracy
 from utils.loader import get_word2id, load_vocabs, combine_files

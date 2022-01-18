@@ -3,6 +3,13 @@ clip_names = {'en': "ViT-B/32",
         'it': 'ViT-B/32'
     }
 
+model_name = {
+    "en": "bert-base-uncased",
+    "es": "../pretrained/uncased/",
+    "it": "dbmdz/bert-base-italian-cased"
+}
+
+
 means = {
 	'cifar10': (0.4914, 0.4822, 0.4465),
 	'cifar100': (0.5071, 0.4867, 0.4408),
@@ -46,7 +53,7 @@ flags = {
 	"reuse_fp_embedding": False,
 	"reuse_image_embedding": True, 
 	"reuse_image_data": True,
-	"using_filtered_images": True,
+	"using_filtered_images": False,
 	"reuse_text_embedding": False, 
 }
 

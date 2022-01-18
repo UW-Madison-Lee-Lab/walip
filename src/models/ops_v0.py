@@ -7,17 +7,11 @@ import configs
 from utils.loader import load_image_data
 from utils.helper import save_images
 from models.prompt_templates import prompts, generate_texts
-
-from transformers import BertForMaskedLM, BertTokenizer
-from transformers import AutoModel, AutoTokenizer
-
-import sys
-sys.path.append("../coco-clip")
-from CLIP import CLIPModel
+from models.clip_italian import get_italian_models
 
 
 def get_clip_based_image_embedding(img_data_name, model_params):
-    is_eng_clip, _, model = model_params
+    is_eng_clip, model = model_params
     image_feature_path = configs.paths['img_dir'] + f'image_feature_{img_data_name}_{configs.flags["using_filtered_images"]}_en{int(is_eng_clip)}_k{configs.num_images}.npy'
 
     print(" Load the image embedding: " + image_feature_path)
@@ -35,24 +29,27 @@ def get_clip_based_image_embedding(img_data_name, model_params):
         images = torch.Tensor(images)
         save_images(images, f'../results/base_images_{configs.flags["using_filtered_images"]}.png', nrows=10)
         with torch.no_grad():
-            image_features = model.image_encoder(images.cuda()).float()
-            image_features = model.image_projection(image_features)
+            if is_eng_clip:
+                image_features = model.encode_image(images.cuda()).float()
+            else:
+                image_features = model(images)
+                image_features = torch.from_numpy(image_features).cuda()
             image_features /= image_features.norm(dim=-1, keepdim=True)
             np.save(image_feature_path, image_features.cpu().numpy())
     return image_features
 
 def get_batch_clip_based_text_features(text_params, model_params):
     template_size, texts = text_params
-    is_eng_clip, tokenizer, model = model_params
-    encoded_query = tokenizer(texts, padding=True, truncation=True,max_length=200)
-    try:
-        batch = {key: torch.tensor(values).cuda() for key, values in encoded_query.items()}
-    except:
-        from IPython import embed; embed()
-    with torch.no_grad():
-        text_features = model.text_encoder(
-            input_ids=batch["input_ids"], attention_mask=batch["attention_mask"])
-        text_features = model.text_projection(text_features).float()
+    is_eng_clip, model = model_params
+    if is_eng_clip:
+        text_tokens = clip.tokenize(texts).cuda()
+        with torch.no_grad():
+            text_features = model.encode_text(text_tokens).float()
+    else:
+        with torch.no_grad():
+            text_features = model(texts)
+            text_features = torch.from_numpy(text_features)
+        text_features = text_features.cuda()
     # ensemble
     text_features = text_features / text_features.norm(dim=-1, keepdim=True)
     bs = text_features.shape[0] // template_size
@@ -95,18 +92,19 @@ def get_fingerprint_embedding(image_features, text_features, logit_scale):
 
 def load_models(lang):
     # load models
-    model = CLIPModel(lang).cuda()
-    model_path = f'../coco-clip/best_{lang}.pt'
-    model.load_state_dict(torch.load(model_path))
-    model.eval()
-    # logit_scale = clip_model.logit_scale.exp().float()
-    logit_scale = 1.0
-    if lang in ['es', 'en']:
-        tokenizer = BertTokenizer.from_pretrained(configs.model_name[lang], do_lower_case=True)
-    elif lang == 'it':
-        tokenizer = AutoTokenizer.from_pretrained(configs.model_name[lang], do_lower_case=True)
-    return lang=='en', model, tokenizer, logit_scale
-
+    if lang == 'en':
+        is_eng_clip = True
+        clip_model, preprocess = clip.load("ViT-B/32")
+        clip_model.cuda().eval()
+        logit_scale = clip_model.logit_scale.exp().float()
+        image_model = text_model = clip_model
+    else: # italian
+        is_eng_clip = False
+        # text_model = multilingual_clip.load_model('M-BERT-Base-ViT-B')
+        # text_model.eval()
+        image_model, text_model = get_italian_models()
+        logit_scale = 20.0
+    return is_eng_clip, image_model, text_model, logit_scale
 
 def load_embedding(emb_type, txt_data_name, img_data_name, lang, vocab=None, mode='test'):
     if emb_type == 'fp':
@@ -123,18 +121,20 @@ def load_embedding(emb_type, txt_data_name, img_data_name, lang, vocab=None, mod
         print("Miss the fast-text embedding")
         return -1
 
-    is_eng_clip, model, tokenizer, logit_scale = load_models(lang)
-    model_params = (is_eng_clip, tokenizer, model)
+    is_eng_clip, image_model, text_model, logit_scale = load_models(lang)
     if emb_type == 'fp':
+        img_model_params = (is_eng_clip, image_model)
+        txt_model_params = (is_eng_clip, text_model)
         # load image
-        image_features = get_clip_based_image_embedding(img_data_name, model_params)
+        image_features = get_clip_based_image_embedding(img_data_name, img_model_params)
         # load text 
-        text_features = get_clip_based_text_embedding(txt_data_name, model_params, vocab, lang, mode)
+        text_features = get_clip_based_text_embedding(txt_data_name, txt_model_params, vocab, lang, mode)
         text_features = torch.from_numpy(text_features).cuda()
         # get emb
         emb = get_fingerprint_embedding(image_features, text_features, logit_scale)
     elif emb_type == 'cliptext':
-        emb = get_clip_based_text_embedding(txt_data_name, model_params, vocab, lang, mode)
+        txt_model_params = (is_eng_clip, text_model)
+        emb = get_clip_based_text_embedding(txt_data_name, txt_model_params, vocab, lang, mode)
 
     np.save(emb_path, emb) 
     return emb
