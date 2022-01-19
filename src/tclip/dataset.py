@@ -4,6 +4,7 @@ import torch
 import albumentations as A
 import numpy as np
 import pandas as pd
+import torchvision
 from PIL import Image
 from transformers import ViTFeatureExtractor
 
@@ -37,10 +38,17 @@ def prepare_dataframe(lang, captions_path):
 def build_loaders(df, mode, params):
     image_ids = df["image_id"].values
     image_filenames = [f"{params.image_path}/{params.image_prefix}{str(image_ids[i]).zfill(12)}.jpg" for i in range(len(image_ids))] 
-    dataset = CLIPDataset(
-        image_filenames,
-        df["caption"].values,
-    )
+    if params.lang == 'it':
+        dataset = CLIPDataset_resnet(
+            image_filenames,
+            df["caption"].values,
+        )
+    else:
+        dataset = CLIPDataset_ViT(
+            image_filenames,
+            df["caption"].values,
+        )
+
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=params.batch_size,
@@ -49,7 +57,7 @@ def build_loaders(df, mode, params):
     )
     return dataloader
 
-class CLIPDataset(torch.utils.data.Dataset):
+class CLIPDataset_ViT(torch.utils.data.Dataset):
     def __init__(self, image_filenames, captions, transforms=None):
         """
         image_filenames and cpations must have the same length; so, if there are
@@ -64,7 +72,7 @@ class CLIPDataset(torch.utils.data.Dataset):
         image = cv2.imread(self.image_filenames[idx])
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         img = np.moveaxis(image, source=-1, destination=0)
-        inputs = self.feature_extractor(img, return_tensors="pt")
+        inputs = self.feature_extractor(img, return_tensors="pt") # transforms already
 
         item = {}
         item['image'] = inputs['pixel_values'][0] 
@@ -76,5 +84,37 @@ class CLIPDataset(torch.utils.data.Dataset):
         return len(self.captions)
 
 
+class CLIPDataset_resnet(torch.utils.data.Dataset):
+    def __init__(self, image_filenames, captions, transforms=None):
+        """
+        image_filenames and cpations must have the same length; so, if there are
+        multiple captions for each image, the image_filenames must have repetitive
+        file names 
+        """
+        self.captions = list(captions)
+        self.image_filenames = image_filenames
+        self.transforms = torchvision.transforms.Compose([
+            torchvision.transforms.Resize(256),
+            torchvision.transforms.CenterCrop(224),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+
+    def __getitem__(self, idx):
+        # image = cv2.imread(self.image_filenames[idx])
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = Image.open(self.image_filenames[idx]).convert('RGB')
+        # img = np.moveaxis(image, source=-1, destination=0)
+        if self.transforms is not None:
+            image = self.transforms(image)
+
+        item = {}
+        item['image'] = image
+        item['caption'] = self.captions[idx]
+        return item
+
+
+    def __len__(self):
+        return len(self.captions)
 
     

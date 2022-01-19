@@ -1,5 +1,5 @@
-emb=cliptext
-map=nn
-set=test
-sim=csls
-python main.py -e $emb -t $set -i cifar10 -w cifar10 -m $map -s $sim
+emb=fasttext
+map=hungarian
+set=val
+sim=inner_prod
+python test.py -e $emb -t $set -i cifar10 -w cifar100 -m $map -s $sim

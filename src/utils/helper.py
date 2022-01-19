@@ -59,3 +59,9 @@ def get_accuracy(dico, col_ind):
     acc = s/dico.shape[0] * 100
     print('Accuracy: {:.4f}'.format(acc))
     return acc, wrong_pairs
+
+
+def log(logf, msg, console_print=True):
+    logf.write(msg + '\n')
+    if console_print:
+        print(msg)

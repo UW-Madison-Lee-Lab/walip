@@ -9,10 +9,12 @@ from CLIP import CLIPModel
 from transformers import BertTokenizer, AutoTokenizer
 
 from clip_ops import AvgMeter, evaluate_classification, get_lr
-from dataset import load_data
+from inference import get_image_embeddings, find_matches
+from dataset import load_data, prepare_dataframe, build_loaders
 
 import argparse
 from transformers import logging
+
 
 logging.set_verbosity_warning()
 os.environ['TOKENIZERS_PARALLELISM'] = "false"
@@ -103,8 +105,7 @@ def train_epoch(model, tokenizier, train_loader, optimizer, lr_scheduler, step):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        if step == "batch":
-            lr_scheduler.step()
+        # if step == "batch":
 
         count = batch["image"].size(0)
         loss_meter.update(loss.item(), count)
@@ -112,6 +113,7 @@ def train_epoch(model, tokenizier, train_loader, optimizer, lr_scheduler, step):
         tqdm_object.set_postfix(train_loss=loss_meter.avg, lr=get_lr(optimizer))
 
         torch.cuda.empty_cache()
+    lr_scheduler.step()
     return loss_meter
 
 def valid_epoch(model, tokenizer, valid_loader):
@@ -131,15 +133,29 @@ def valid_epoch(model, tokenizer, valid_loader):
         tqdm_object.set_postfix(valid_loss=loss_meter.avg)
     return loss_meter
 
+
+def log_write(logf, msg, console_print=True):
+    logf.write(msg + '\n')
+    if console_print:
+        print(msg)
+
 def train(model, tokenizer, params):
+    logf = open(f'../../results/logs/{params.data}_{params.lang}.out', 'w')
     print("Training model")
     train_loader, valid_loader = load_data(params)
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=params.lr, weight_decay=params.weight_decay
-    )
-    lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", patience=params.patience, factor=params.factor
-    )
+    # optimizer = torch.optim.AdamW(
+        # model.parameters(), lr=params.lr, weight_decay=params.weight_decay
+    # )
+    optimizer = torch.optim.SGD(model.parameters(), params.lr)
+    
+    # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    #     optimizer, mode="min", patience=params.patience, factor=params.factor
+    # )
+    # lambda1 = lambda epoch: epoch // 30
+    lambda2 = lambda epoch: 0.95 ** epoch
+    # lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda2)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.9)
+    # lr_scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0002, max_lr=0.002,step_size_up=5,mode="triangular")
     step = "epoch"
 
     best_loss = float('inf')
@@ -154,12 +170,45 @@ def train(model, tokenizer, params):
         if valid_loss.avg < best_loss:
             best_loss = valid_loss.avg
             torch.save(model.state_dict(), model_path)
-            print("Saved Best Model!")
+            log_write(logf, "Saved Best Model!")
+        
+        log_write(logf, "epoch {} train_loss: {:.4f} val_loss: {:.4f}".format(epoch, train_loss.avg, valid_loss.avg))
 
 def evaluate(model, tokenizer, params):
     model.eval()
     print("Evaluating classification!")
     evaluate_classification(model, tokenizer, params)
+
+
+def inference(query, model, tokenizer, params):
+    model.eval()
+    print("Evaluate model on " + params.lang)
+    orig_lang = params.lang
+
+    # image-path: eng
+    params.lang = 'en'
+    params.image_path = f"{data_folder}/{params.data}/images/{image_folders[params.lang]}"
+    params.captions_path = f"{data_folder}/{params.data}/captions/{params.lang}/{caption_names[params.lang]}"
+    params.image_prefix = image_prefixes[params.lang]
+    # train_loader, valid_loader = load_data(params)
+    _, valid_df = prepare_dataframe('en', params.captions_path)
+    valid_loader = build_loaders(valid_df, "valid", params)
+    image_embeddings = get_image_embeddings(model, valid_loader, params.device)
+
+    image_ids = valid_df["image_id"].values
+    image_filenames = [f"{params.image_path}/{params.image_prefix}{str(image_ids[i]).zfill(12)}.jpg" for i in range(len(image_ids))] 
+
+
+    # set-back lang
+    params.lang = orig_lang
+    find_matches(model, 
+        tokenizer,
+        image_embeddings,
+        query=query,
+        image_filenames=image_filenames,
+        lang=params.lang,
+        n=9, device=params.device)
+
 
 
 if __name__ == "__main__":
@@ -175,4 +224,11 @@ if __name__ == "__main__":
     if params.is_train:
         train(model, tokenizer, params)
     else:
-        evaluate(model, tokenizer, params)
+        # evaluate(model, tokenizer, params)
+        if params.lang == 'en':
+            # query = "a bus sitting next to the building"
+            query = "A man riding a horse"
+        else:
+            # query = "un autobus seduto accanto a un edificio"
+            query = "Una persona sta guidando"
+        inference(query, model, tokenizer, params)

@@ -121,7 +121,8 @@ def load_embedding(emb_type, txt_data_name, img_data_name, lang, vocab=None, mod
         return emb
     elif emb_type == 'fasttext':
         print("Miss the fast-text embedding")
-        return -1
+        emb = np.load(emb_path, allow_pickle=True)
+        return emb
 
     is_eng_clip, model, tokenizer, logit_scale = load_models(lang)
     model_params = (is_eng_clip, tokenizer, model)

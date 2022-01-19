@@ -1,11 +1,11 @@
 import torch
 from torch import nn
-
+import torchvision
 from transformers import BertForMaskedLM, BertConfig, AutoConfig, AutoModel
 from transformers import ViTModel, ViTConfig, ViTFeatureExtractor
 
 
-class ImageEncoder(nn.Module):
+class ImageEncoder_ViT(nn.Module):
     """
     Encode images to a fixed size vector
     """
@@ -27,6 +27,26 @@ class ImageEncoder(nn.Module):
         outputs = self.model(x)
         last_hidden_state = outputs.last_hidden_state
         return last_hidden_state[:, self.target_token_idx, :]
+
+class ImageEncoder_resnet(nn.Module):
+    """
+    Encode images to a fixed size vector
+    """
+
+    def __init__(
+        self, model_name='resnet101', pretrained=True, trainable=True):
+        super().__init__()
+        self.model = torchvision.models.resnet50(pretrained=pretrained)
+        ### strip the last layer
+        self.feature_extractor = torch.nn.Sequential(*list(self.model.children())[:-1])
+        for p in self.feature_extractor.parameters():
+            p.requires_grad = trainable
+
+        self.target_token_idx = 0
+
+    def forward(self, x):
+        output = self.feature_extractor(x)
+        return torch.flatten(output, 1)
 
 
 class TextEncoder(nn.Module):

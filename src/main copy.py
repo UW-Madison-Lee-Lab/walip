@@ -66,8 +66,6 @@ if params.analysis:
     # compare text embedddings of two languages
     pass
 else:
-    if configs.emb_type == 'fasttext':
-        from IPython import embed; embed()
     test_fpath = configs.paths['txt_dir'] + f'{params.word_data}_{params.src_lang}_{params.tgt_lang}_test.txt'
     if not os.path.isfile(test_fpath):
         combine_files(params.word_data, [params.src_lang, params.tgt_lang], 'test')

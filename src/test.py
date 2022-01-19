@@ -4,10 +4,9 @@ import scipy
 from scipy import stats, optimize, interpolate
 import scipy.stats
 import scipy.optimize
-from evals.word_translation import get_csls_word_translation, get_topk_translation_accuracy, load_dictionary
 from utils.helper import get_accuracy
+from evals.word_translation import get_csls_word_translation, get_topk_translation_accuracy, load_dictionary
 from utils.loader import get_word2id, load_vocabs, combine_files
-from models.ops import load_embedding
 import argparse
 import configs
 
@@ -45,6 +44,15 @@ def process_configs(params):
     configs.langs['src'] = params.src_lang
     configs.langs['tgt'] = params.tgt_lang
 
+
+
+def load_embedding(emb_type, txt_data_name, img_data_name, lang, vocab=None, mode='test'):
+    fname = f'{emb_type}_{txt_data_name}_{lang}_{mode}.npy'
+    print(" Load embedding: " + fname)
+    emb_path = configs.paths['emb_dir'] + fname
+    emb = np.load(emb_path, allow_pickle=True)
+    return emb
+
 # prepare embedding
 def prepare_embeddings(params):
     vocabs, word2ids, embs = {}, {}, {}
@@ -66,13 +74,18 @@ if params.analysis:
     # compare text embedddings of two languages
     pass
 else:
-    if configs.emb_type == 'fasttext':
-        from IPython import embed; embed()
-    test_fpath = configs.paths['txt_dir'] + f'{params.word_data}_{params.src_lang}_{params.tgt_lang}_test.txt'
+    test_fpath = configs.paths['txt_dir'] + f'{params.word_data}_{params.src_lang}_{params.tgt_lang}_{params.data_mode}.txt'
     if not os.path.isfile(test_fpath):
         combine_files(params.word_data, [params.src_lang, params.tgt_lang], 'test')
     dico = load_dictionary(test_fpath, word2ids['src'], word2ids['tgt'], delimiter=configs.delimiters[params.word_data])
     dico = dico.cuda()
+
+    # update the embedding:
+    from IPython import embed; embed()
+    emb0 = embs['src'] @ embs['tgt'].T
+    emb1 = embs['tgt'] @ embs['src'].T
+    embs['src'] = emb0
+    embs['tgt'] = emb1
     for s in ['src', 'tgt']:
         embs[s] = torch.from_numpy(embs[s]).cuda()
         # assert dico[:, i].max() < embs[s].size(0)
@@ -110,9 +123,7 @@ else:
     if params.sim_score in ['csls', 'cosine']:
         scores = get_csls_word_translation(dico, embs['src'], embs['tgt'], params.sim_score)
     elif params.sim_score == 'inner_prod':
-        test_emb0 = embs['src'][dico[:, 0]]
-        test_emb1 = embs['src'][dico[:, 1]]
-        scores = test_emb0 @ test_emb1.T 
+        scores = embs['src'] @ embs['tgt'].T 
 
     if params.matching_method == 'nn':
         results = get_topk_translation_accuracy(dico, scores)
