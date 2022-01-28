@@ -5,6 +5,7 @@ from torchvision import transforms
 from torchvision.transforms import Normalize, Resize, ToTensor
 from torchvision.transforms.functional import InterpolationMode
 import torch.nn.functional as F
+from tqdm import tqdm
 
 
 class AvgMeter:
@@ -46,6 +47,55 @@ def accuracy(output, target, topk=(1,)):
         correct_k = correct[:k].flatten().float().sum(0)
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
+
+
+def evaluate_multiclass_classification(model, tokenizer, params, data_loader):
+    loss = torch.nn.MultiLabelSoftMarginLoss()
+
+    # Load text embeddings for each possible image class
+    with open('../../dicts/texts/coco/coco_en_labels.txt') as f:
+        lines = f.readlines()
+        texts = []
+        for i, desc in enumerate(lines):
+            desc = desc.strip().lower()
+            if params.lang == 'en':
+                texts.append("A photo of a {}.".format(desc))
+            elif params.lang == 'es':
+                texts.append("una foto de un {}.".format(desc))
+            else:
+                texts.append("una foto di un {}.".format(desc))
+
+        
+        text_tokens = tokenizer(texts, padding=True, truncation=True,max_length=params.max_length)
+        item = {key: torch.tensor(values).to(params.device) for key, values in text_tokens.items()}
+        with torch.no_grad():
+            text_features = model.text_encoder(
+                input_ids=item["input_ids"], attention_mask=item["attention_mask"]
+            )
+            text_embeddings = model.text_projection(text_features)
+
+            # Not sure whether to normalize:
+            #text_embeddings = F.normalize(text_embeddings, dim=-1)
+
+
+    model.eval()
+    tqdm_object = tqdm(data_loader, total=len(data_loader))
+    total = 0
+    num_batches = 0
+    for batch in tqdm_object:
+        labels = batch["labels"].to(params.device)
+        # Should be of shape (batch_sz, num_classes)
+        logits = model.multilabel_classify(batch, text_embeddings)
+        l = loss(logits, labels).item()
+        total += l
+        num_batches += 1
+    print("Average MultiClass Loss is: {}".format(total/num_batches))
+
+        
+
+
+
+ 
 
 
 def evaluate_classification(model, tokenizer, params):

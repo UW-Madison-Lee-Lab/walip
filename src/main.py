@@ -13,6 +13,9 @@ import configs
 
 os.environ['TOKENIZERS_PARALLELISM'] = "false"
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+
 # main
 parser = argparse.ArgumentParser(description='Unsupervised Word Translation')
 parser.add_argument("--seed", type=int, default=-1, help="Initialization seed")
@@ -60,7 +63,6 @@ process_configs(params)
 print(" Prepare embedding")
 word2ids, embs = prepare_embeddings(params)
 
-
 if params.analysis:
     # compare image embeddings of two languages
     # compare text embedddings of two languages
@@ -72,15 +74,15 @@ else:
     if not os.path.isfile(test_fpath):
         combine_files(params.word_data, [params.src_lang, params.tgt_lang], 'test')
     dico = load_dictionary(test_fpath, word2ids['src'], word2ids['tgt'], delimiter=configs.delimiters[params.word_data])
-    dico = dico.cuda()
+    dico = dico.to(device)
     for s in ['src', 'tgt']:
-        embs[s] = torch.from_numpy(embs[s]).cuda()
+        embs[s] = torch.from_numpy(embs[s]).to(device)
         # assert dico[:, i].max() < embs[s].size(0)
 
     # decorrelate
     if params.emb_type == 'cliptext':
         W = scipy.stats.ortho_group.rvs(embs['src'].shape[1])
-        W = torch.from_numpy(W).type(torch.FloatTensor).cuda()
+        W = torch.from_numpy(W).type(torch.FloatTensor).to(device)
         embs['src'] = embs['src'] @ W.T
 
     print('==== Eval', params.word_data, ':', params.emb_type, params.sim_score, params.matching_method)
@@ -92,7 +94,7 @@ else:
             U, Sigma, VT = scipy.linalg.svd(M, full_matrices=True)
             # W = U @ VT
             W = U.dot(VT)
-            return torch.Tensor(W).cuda()
+            return torch.Tensor(W).to(device)
         # get the training set:
         test_id1 = dico[:, 0]
         train_id1 = []

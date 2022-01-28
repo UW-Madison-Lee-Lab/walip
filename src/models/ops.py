@@ -1,6 +1,5 @@
 import numpy as np
 import torch, os
-import clip
 from funcy import chunks
 from tqdm import tqdm
 import configs
@@ -12,9 +11,13 @@ from transformers import BertForMaskedLM, BertTokenizer
 from transformers import AutoModel, AutoTokenizer
 
 import sys
-sys.path.append("../coco-clip")
-from CLIP import CLIPModel
+# sys.path.append("../coco-clip")
+# from CLIP import CLIPModel
+sys.path.append("./tclip")
+from tclip.CLIP import CLIPModel
 
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def get_clip_based_image_embedding(img_data_name, model_params):
     is_eng_clip, _, model = model_params
@@ -23,7 +26,7 @@ def get_clip_based_image_embedding(img_data_name, model_params):
     print(" Load the image embedding: " + image_feature_path)
     if os.path.isfile(image_feature_path) and configs.flags["reuse_image_embedding"]:
         image_features = np.load(image_feature_path, allow_pickle=True)
-        image_features = torch.Tensor(image_features).cuda()
+        image_features = torch.Tensor(image_features).to(device)
     else:
         assert model is not None
         image_path = configs.paths['img_dir'] + f'image_{img_data_name}_{configs.flags["using_filtered_images"]}_k{configs.num_images}.npy'
@@ -35,7 +38,7 @@ def get_clip_based_image_embedding(img_data_name, model_params):
         images = torch.Tensor(images)
         save_images(images, f'../results/base_images_{configs.flags["using_filtered_images"]}.png', nrows=10)
         with torch.no_grad():
-            image_features = model.image_encoder(images.cuda()).float()
+            image_features = model.image_encoder(images.to(device)).float()
             image_features = model.image_projection(image_features)
             image_features /= image_features.norm(dim=-1, keepdim=True)
             np.save(image_feature_path, image_features.cpu().numpy())
@@ -46,7 +49,7 @@ def get_batch_clip_based_text_features(text_params, model_params):
     is_eng_clip, tokenizer, model = model_params
     encoded_query = tokenizer(texts, padding=True, truncation=True,max_length=200)
     try:
-        batch = {key: torch.tensor(values).cuda() for key, values in encoded_query.items()}
+        batch = {key: torch.tensor(values).to(device) for key, values in encoded_query.items()}
     except:
         from IPython import embed; embed()
     with torch.no_grad():
@@ -95,8 +98,9 @@ def get_fingerprint_embedding(image_features, text_features, logit_scale):
 
 def load_models(lang):
     # load models
-    model = CLIPModel(lang).cuda()
-    model_path = f'../coco-clip/best_{lang}.pt'
+    # TODO: add model_name parameter
+    model = CLIPModel(lang, "bert-base-uncased").to(device)
+    model_path = f'../results/clips/coco/best_{lang}.pt'
     model.load_state_dict(torch.load(model_path))
     model.eval()
     # logit_scale = clip_model.logit_scale.exp().float()
@@ -131,7 +135,7 @@ def load_embedding(emb_type, txt_data_name, img_data_name, lang, vocab=None, mod
         image_features = get_clip_based_image_embedding(img_data_name, model_params)
         # load text 
         text_features = get_clip_based_text_embedding(txt_data_name, model_params, vocab, lang, mode)
-        text_features = torch.from_numpy(text_features).cuda()
+        text_features = torch.from_numpy(text_features).to(device)
         # get emb
         emb = get_fingerprint_embedding(image_features, text_features, logit_scale)
     elif emb_type == 'cliptext':

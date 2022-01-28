@@ -51,8 +51,8 @@ num_prompts = 1
 
 flags = {
 	"reuse_fp_embedding": False,
-	"reuse_image_embedding": True, 
-	"reuse_image_data": True,
+	"reuse_image_embedding": False, 
+	"reuse_image_data": False,
 	"using_filtered_images": False,
 	"reuse_text_embedding": False, 
 }

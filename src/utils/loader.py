@@ -47,6 +47,7 @@ def load_vocabs_from_pairs(data_name, langs, mode):
 
 def load_vocabs(data_name, lang, mode):
     fpath = configs.paths['txt_dir']+ '{}_{}_{}.txt'.format(data_name, lang, mode)
+    print(fpath)
     if not os.path.isfile(fpath):
         sys.exit("File doesn't exist!!!")
        

@@ -9,6 +9,8 @@ from utils.helper import save_images
 from models.prompt_templates import prompts, generate_texts
 from models.clip_italian import get_italian_models
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 def get_clip_based_image_embedding(img_data_name, model_params):
     is_eng_clip, model = model_params
@@ -17,7 +19,7 @@ def get_clip_based_image_embedding(img_data_name, model_params):
     print(" Load the image embedding: " + image_feature_path)
     if os.path.isfile(image_feature_path) and configs.flags["reuse_image_embedding"]:
         image_features = np.load(image_feature_path, allow_pickle=True)
-        image_features = torch.Tensor(image_features).cuda()
+        image_features = torch.Tensor(image_features).to(device)
     else:
         assert model is not None
         image_path = configs.paths['img_dir'] + f'image_{img_data_name}_{configs.flags["using_filtered_images"]}_k{configs.num_images}.npy'
@@ -30,10 +32,10 @@ def get_clip_based_image_embedding(img_data_name, model_params):
         save_images(images, f'../results/base_images_{configs.flags["using_filtered_images"]}.png', nrows=10)
         with torch.no_grad():
             if is_eng_clip:
-                image_features = model.encode_image(images.cuda()).float()
+                image_features = model.encode_image(images.to(device)).float()
             else:
                 image_features = model(images)
-                image_features = torch.from_numpy(image_features).cuda()
+                image_features = torch.from_numpy(image_features).to(device)
             image_features /= image_features.norm(dim=-1, keepdim=True)
             np.save(image_feature_path, image_features.cpu().numpy())
     return image_features
@@ -42,14 +44,14 @@ def get_batch_clip_based_text_features(text_params, model_params):
     template_size, texts = text_params
     is_eng_clip, model = model_params
     if is_eng_clip:
-        text_tokens = clip.tokenize(texts).cuda()
+        text_tokens = clip.tokenize(texts).to(device)
         with torch.no_grad():
             text_features = model.encode_text(text_tokens).float()
     else:
         with torch.no_grad():
             text_features = model(texts)
             text_features = torch.from_numpy(text_features)
-        text_features = text_features.cuda()
+        text_features = text_features.to(device)
     # ensemble
     text_features = text_features / text_features.norm(dim=-1, keepdim=True)
     bs = text_features.shape[0] // template_size
@@ -82,6 +84,7 @@ def get_clip_based_text_embedding(txt_data_name, model_params, vocab, lang, mode
 def get_fingerprint_embedding(image_features, text_features, logit_scale):
     # logits_per_image = logit_scale * image_features @ text_features.t()
     txt_logits = text_features @ image_features.t()
+    # vocab_size x num images
     if configs.num_images > 1:
         K, D = configs.num_images, image_features.shape[0] // configs.num_images
         txt_logits = txt_logits.view(-1, D, K)
@@ -95,7 +98,7 @@ def load_models(lang):
     if lang == 'en':
         is_eng_clip = True
         clip_model, preprocess = clip.load("ViT-B/32")
-        clip_model.cuda().eval()
+        clip_model.to(device).eval()
         logit_scale = clip_model.logit_scale.exp().float()
         image_model = text_model = clip_model
     else: # italian
@@ -129,9 +132,11 @@ def load_embedding(emb_type, txt_data_name, img_data_name, lang, vocab=None, mod
         image_features = get_clip_based_image_embedding(img_data_name, img_model_params)
         # load text 
         text_features = get_clip_based_text_embedding(txt_data_name, txt_model_params, vocab, lang, mode)
-        text_features = torch.from_numpy(text_features).cuda()
+        text_features = torch.from_numpy(text_features).to(device)
+        
         # get emb
         emb = get_fingerprint_embedding(image_features, text_features, logit_scale)
+        print(text_features.size(), image_features.size(), emb.shape)
     elif emb_type == 'cliptext':
         txt_model_params = (is_eng_clip, text_model)
         emb = get_clip_based_text_embedding(txt_data_name, txt_model_params, vocab, lang, mode)

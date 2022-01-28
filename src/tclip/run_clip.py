@@ -8,9 +8,10 @@ from torch import nn
 from CLIP import CLIPModel
 from transformers import BertTokenizer, AutoTokenizer
 
-from clip_ops import AvgMeter, evaluate_classification, get_lr
 from inference import get_image_embeddings, find_matches
 from dataset import load_data, prepare_dataframe, build_loaders
+from clip_ops import AvgMeter, evaluate_classification, get_lr, evaluate_multiclass_classification
+from dataset import load_data
 
 import argparse
 from transformers import logging
@@ -174,10 +175,16 @@ def train(model, tokenizer, params):
         
         log_write(logf, "epoch {} train_loss: {:.4f} val_loss: {:.4f}".format(epoch, train_loss.avg, valid_loss.avg))
 
+
+
+
 def evaluate(model, tokenizer, params):
     model.eval()
+    print(params)
     print("Evaluating classification!")
-    evaluate_classification(model, tokenizer, params)
+    train_loader, _ = load_data(params)
+    evaluate_multiclass_classification(model, tokenizer, params, train_loader)
+    #evaluate_classification(model, tokenizer, params)
 
 
 def inference(query, model, tokenizer, params):
@@ -216,15 +223,17 @@ if __name__ == "__main__":
     model_path = f"../../results/clips/{params.data}/best_{params.lang}.pt"
     tokenizer = get_tokenizer(params.lang, params.model_name) # will be trained?
     if params.resume:
+        
         model = CLIPModel(params.lang, params.model_name, pretrained=False, temperature=params.temperature).to(params.device)
         model.load_state_dict(torch.load(model_path))
     else:
+
         model = CLIPModel(params.lang, params.model_name, pretrained=True, temperature=params.temperature).to(params.device)
 
     if params.is_train:
         train(model, tokenizer, params)
     else:
-        # evaluate(model, tokenizer, params)
+        evaluate(model, tokenizer, params)
         if params.lang == 'en':
             # query = "a bus sitting next to the building"
             query = "A man riding a horse"
