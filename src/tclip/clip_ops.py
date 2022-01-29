@@ -6,6 +6,7 @@ from torchvision.transforms import Normalize, Resize, ToTensor
 from torchvision.transforms.functional import InterpolationMode
 import torch.nn.functional as F
 from tqdm import tqdm
+from sklearn import metrics
 
 
 class AvgMeter:
@@ -51,13 +52,14 @@ def accuracy(output, target, topk=(1,)):
 
 def evaluate_multiclass_classification(model, tokenizer, params, data_loader):
     loss = torch.nn.MultiLabelSoftMarginLoss()
-
+    words = []
     # Load text embeddings for each possible image class
     with open('../../dicts/texts/coco/coco_en_labels.txt') as f:
         lines = f.readlines()
         texts = []
         for i, desc in enumerate(lines):
             desc = desc.strip().lower()
+            words.append(desc)
             if params.lang == 'en':
                 texts.append("A photo of a {}.".format(desc))
             elif params.lang == 'es':
@@ -82,14 +84,47 @@ def evaluate_multiclass_classification(model, tokenizer, params, data_loader):
     tqdm_object = tqdm(data_loader, total=len(data_loader))
     total = 0
     num_batches = 0
-    for batch in tqdm_object:
-        labels = batch["labels"].to(params.device)
-        # Should be of shape (batch_sz, num_classes)
-        logits = model.multilabel_classify(batch, text_embeddings)
-        l = loss(logits, labels).item()
-        total += l
-        num_batches += 1
-    print("Average MultiClass Loss is: {}".format(total/num_batches))
+    
+    gts = {i:[] for i in range(0, 80)}
+    preds = {i:[] for i in range(0, 80)}
+    with torch.no_grad():
+        for batch in tqdm_object:
+            
+            if num_batches == 5:
+                break
+            labels = batch["labels"].to(params.device)
+            
+            # Should be of shape (batch_sz, num_classes)
+            logits = model.multilabel_classify(batch, text_embeddings)
+            l = loss(logits, labels).item()
+            total += l
+            num_batches += 1
+            output = torch.sigmoid(logits)
+            pred = output.squeeze().data.cpu().numpy()
+            gt = labels.squeeze().data.cpu().numpy()
+
+            for label in range(0, 80):
+                gts[label].extend(gt[:,label])
+                preds[label].extend(pred[:,label])
+
+    print("Average Multilabel Loss is: {}".format(total/num_batches))
+    
+    FinalMAPs = []
+    for i in range(0, 80):
+        precision, recall, _ = metrics.precision_recall_curve(gts[i], preds[i])
+        FinalMAPs.append(metrics.auc(recall, precision))
+
+    # Print AUC for each class
+    indices = [i for i in range(80)]
+    indices = sorted(indices, key = lambda x: FinalMAPs[i])
+    with open("../../results/AUC.txt", "w") as f:
+        for idx in indices:
+            f.write("{}: {}\n".format(words[idx], FinalMAPs[idx]))
+
+
+    
+    return FinalMAPs
+    
 
         
 
