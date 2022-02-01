@@ -89,13 +89,12 @@ def evaluate_multiclass_classification(model, tokenizer, params, data_loader):
     preds = {i:[] for i in range(0, 80)}
     with torch.no_grad():
         for batch in tqdm_object:
-            
-            if num_batches == 5:
-                break
+
             labels = batch["labels"].to(params.device)
+            images = batch["image"].to(params.device)
             
             # Should be of shape (batch_sz, num_classes)
-            logits = model.multilabel_classify(batch, text_embeddings)
+            logits = model.multilabel_classify(images, text_embeddings)
             l = loss(logits, labels).item()
             total += l
             num_batches += 1
