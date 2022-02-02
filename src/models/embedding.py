@@ -3,7 +3,7 @@ import torch, os
 import torch.nn.functional as F
 from funcy import chunks
 from tqdm import tqdm
-from utils.loader import load_image_data
+from utils.image_loader import load_image_data
 from utils.helper import save_images
 from models.templates import prompts, generate_texts
 from models.ops import load_models, get_tokenizer

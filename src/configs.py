@@ -59,7 +59,8 @@ delimiters = {
 	'noun': ' ',
 	'imagenet': ' | ',
 	'composite': ' | ',
-	'wiki': ' '
+	'wiki': ' ', 
+	'coco': ' '
 }
 
 flags = {

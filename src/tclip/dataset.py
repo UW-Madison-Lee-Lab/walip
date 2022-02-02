@@ -7,7 +7,6 @@ import pandas as pd
 import torchvision
 from PIL import Image
 from transformers import ViTFeatureExtractor
-import ast
 
 def load_data(params):
     train_df, valid_df = prepare_dataframe(params.lang, params.captions_path)
@@ -36,16 +35,9 @@ def prepare_dataframe(lang, captions_path):
     valid_df = df[df["image_id"].isin(val_images)].reset_index(drop=True)
     return train_df, valid_df
 
-# Given label of form 1,4,10: returns [1,0,0,1,0,0,0,0,0,1]
-def generate_label(label):
-    container = torch.LongTensor(np.zeros(80))
-    container[[int(x) for x in label.split(",")]] = 1
-    return container
-
 def build_loaders(df, mode, params):
     image_ids = df["image_id"].values
     image_filenames = [f"{params.image_path}/{params.image_prefix}{str(image_ids[i]).zfill(12)}.jpg" for i in range(len(image_ids))] 
-<<<<<<< HEAD
     # not_avai = []
     # for i in range(len(image_ids)):
     #     if not os.path.isfile(image_filenames[i]):
@@ -63,21 +55,6 @@ def build_loaders(df, mode, params):
         image_filenames,
         df["caption"].values,
     )
-=======
-
-    if params.lang == 'it':
-        dataset = CLIPDataset_resnet(
-            image_filenames,
-            df["caption"].values,
-            df["labels"].apply(generate_label)
-        )
-    else:
-        dataset = CLIPDataset_ViT(
-            image_filenames,
-            df["caption"].values,
-            df["labels"].apply(generate_label)
-        )
->>>>>>> cf9844146b8aa1201f6ec852c6fb1dc6bc40b86c
 
     dataloader = torch.utils.data.DataLoader(
         dataset,
@@ -88,15 +65,13 @@ def build_loaders(df, mode, params):
     return dataloader
 
 class CLIPDataset_ViT(torch.utils.data.Dataset):
-    def __init__(self, image_filenames, captions, labels, transforms=None):
-
+    def __init__(self, image_filenames, captions, transforms=None):
         """
         image_filenames and cpations must have the same length; so, if there are
         multiple captions for each image, the image_filenames must have repetitive
         file names 
         """
         self.captions = list(captions)
-        self.labels = labels
         self.image_filenames = image_filenames
         self.feature_extractor = ViTFeatureExtractor.from_pretrained('google/vit-base-patch16-224-in21k')
 
@@ -109,7 +84,6 @@ class CLIPDataset_ViT(torch.utils.data.Dataset):
         item = {}
         item['image'] = inputs['pixel_values'][0] 
         item['caption'] = self.captions[idx]
-        item['labels'] = self.labels[idx]
         return item
 
 
@@ -118,14 +92,13 @@ class CLIPDataset_ViT(torch.utils.data.Dataset):
 
 
 class CLIPDataset_resnet(torch.utils.data.Dataset):
-    def __init__(self, image_filenames, captions, labels, transforms=None):
+    def __init__(self, image_filenames, captions, transforms=None):
         """
         image_filenames and cpations must have the same length; so, if there are
         multiple captions for each image, the image_filenames must have repetitive
         file names 
         """
         self.captions = list(captions)
-        self.labels = labels
         self.image_filenames = image_filenames
         self.transforms = torchvision.transforms.Compose([
             torchvision.transforms.Resize(256),
@@ -145,7 +118,6 @@ class CLIPDataset_resnet(torch.utils.data.Dataset):
         item = {}
         item['image'] = image
         item['caption'] = self.captions[idx]
-        item['labels'] = self.labels[idx]
         return item
 
 

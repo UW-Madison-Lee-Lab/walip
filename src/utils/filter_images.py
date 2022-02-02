@@ -4,7 +4,7 @@ import numpy as np
 
 import torch
 from torch.utils.data import DataLoader
-from utils.loader import load_vocabs, load_image_dataset
+from utils.image_loader import load_vocabs, load_image_dataset
 from models.ops import get_tokenizer, load_models
 from models.templates import prompts, generate_texts
 from tqdm import tqdm

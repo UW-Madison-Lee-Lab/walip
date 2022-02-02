@@ -11,16 +11,13 @@ import torch.nn.functional as F
 
 from evals.word_translation import get_csls_word_translation, build_dictionary, get_topk_translation_accuracy, load_dictionary
 from utils.helper import get_accuracy
-from utils.loader import get_word2id, load_vocabs, combine_files, load_vocabs_from_pairs
+from utils.text_loader import get_word2id, load_vocabs, combine_files, load_vocabs_from_pairs
 from models.embedding import ClipEmbedding
-from tclip.clip_ops import evaluate_classification
+from tclip.clip_ops import evaluate_classification, evaluate_multiclass_classification
 import configs
 import argparse
 
 os.environ['TOKENIZERS_PARALLELISM'] = "false"
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
 
 # main
 parser = argparse.ArgumentParser(description='Unsupervised Word Translation')
@@ -239,8 +236,9 @@ def refinement(W, embs):
 
 
 if params.analysis:
-    evaluate_classification(params.image_data, params.src_lang, params)
-    evaluate_classification(params.image_data, params.tgt_lang, params)
+    # evaluate_classification(params.image_data, params.src_lang, params)
+    # evaluate_classification(params.image_data, params.tgt_lang, params)
+    evaluate_multiclass_classification(params.image_data, params.tgt_lang, params)
 elif params.preprocess:
     from utils.filter_images import find_correct_images, find_interesection
     find_correct_images(params.src_lang, params)
@@ -276,8 +274,8 @@ else:
     else:
         ##### Vocabularies
         word2ids, embs = prepare_embeddings(params.data_mode)
-
     test(word2ids, embs)
+    from IPython import embed; embed()
     
 
     ###============= Translation =============##########

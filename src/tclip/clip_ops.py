@@ -1,20 +1,22 @@
 import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from utils.loader import load_vocabs, load_image_dataset, ViTDataset
+from utils.text_loader import load_vocabs
+from utils.image_loader import ViTDataset, load_image_dataset
 from utils.helper import AverageMeter, accuracy
 from models.templates import prompts, generate_texts
 from models.ops import get_tokenizer, load_models
 import configs
 from tqdm import tqdm
-from sklearn import metrics
 
 
 
-def evaluate_classification(image_data, lang, opts):
+def load_image_and_class(image_data, lang, opts):
     vit_image_dataset = load_image_dataset(image_data)
+    # from torchvision.datasets import CIFAR100
+    # image_dataset = CIFAR100('../dataset/', download=True, train=False)
+    # vit_image_dataset = ViTDataset(image_dataset)
     dataloader = DataLoader(vit_image_dataset, batch_size=8, shuffle=False, drop_last=True, num_workers=4)
-    tqdm_object = tqdm(dataloader, total=len(dataloader))
 
     vocab = load_vocabs(opts, lang)
     texts = generate_texts(prompts[lang], vocab, k=opts.num_prompts)
@@ -32,8 +34,14 @@ def evaluate_classification(image_data, lang, opts):
         )
         text_embeddings = model.text_projection(text_features)
         text_embeddings = F.normalize(text_embeddings, dim=-1)
+
+    return model, text_embeddings, dataloader
+
+
+def evaluate_classification(image_data, lang, opts):
+    model, text_embeddings, dataloader = load_image_and_class(image_data, lang, opts)
+    tqdm_object = tqdm(dataloader, total=len(dataloader))
     top5, top1 = AverageMeter(), AverageMeter()
-    # feature_extractor = ViTFeatureExtractor.from_pretrained('google/vit-base-patch16-224-in21k')
     for (images, labels) in tqdm_object:
         # print(batch_idx)
         labels = labels.long().to(opts.device)
@@ -52,38 +60,15 @@ def evaluate_classification(image_data, lang, opts):
 
 
 
-def evaluate_multiclass_classification(model, tokenizer, params, data_loader):
+
+def evaluate_multiclass_classification(image_data, lang, opts):
     loss = torch.nn.MultiLabelSoftMarginLoss()
     words = []
-    # Load text embeddings for each possible image class
-    with open('../../dicts/texts/coco/coco_en_labels.txt') as f:
-        lines = f.readlines()
-        texts = []
-        for i, desc in enumerate(lines):
-            desc = desc.strip().lower()
-            words.append(desc)
-            if params.lang == 'en':
-                texts.append("A photo of a {}.".format(desc))
-            elif params.lang == 'es':
-                texts.append("una foto de un {}.".format(desc))
-            else:
-                texts.append("una foto di un {}.".format(desc))
 
-        
-        text_tokens = tokenizer(texts, padding=True, truncation=True,max_length=params.max_length)
-        item = {key: torch.tensor(values).to(params.device) for key, values in text_tokens.items()}
-        with torch.no_grad():
-            text_features = model.text_encoder(
-                input_ids=item["input_ids"], attention_mask=item["attention_mask"]
-            )
-            text_embeddings = model.text_projection(text_features)
-
-            # Not sure whether to normalize:
-            #text_embeddings = F.normalize(text_embeddings, dim=-1)
-
-
+    model, text_embeddings, dataloader = load_image_and_class(image_data, lang, opts)
+    tqdm_object = tqdm(dataloader, total=len(dataloader))
     model.eval()
-    tqdm_object = tqdm(data_loader, total=len(data_loader))
+
     total = 0
     num_batches = 0
     
@@ -91,9 +76,8 @@ def evaluate_multiclass_classification(model, tokenizer, params, data_loader):
     preds = {i:[] for i in range(0, 80)}
     with torch.no_grad():
         for batch in tqdm_object:
-
-            labels = batch["labels"].to(params.device)
-            images = batch["image"].to(params.device)
+            labels = batch["labels"].to(opts.device)
+            images = batch["image"].to(opts.device)
             
             # Should be of shape (batch_sz, num_classes)
             logits = model.multilabel_classify(images, text_embeddings)
