@@ -6,7 +6,7 @@ from tqdm import tqdm
 import configs
 from utils.loader import load_image_data
 from utils.helper import save_images
-from models.prompt_templates import prompts, generate_texts
+from models.templates import prompts, generate_texts
 from models.clip_italian import get_italian_models
 
 

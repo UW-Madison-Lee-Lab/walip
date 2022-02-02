@@ -1,7 +1,7 @@
 from utils.filter_images import find_correct_images, find_interesection
 import configs
 
-data = 'imagenet'
+data = 'cifar10'
 
 dict_pth = '../dicts/'
 configs.paths['emb_dir'] = dict_pth + 'embeddings/'

@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import numpy as np
 import torch.nn.functional as F
-from modules import ImageEncoder_resnet, ImageEncoder_ViT, TextEncoder, ProjectionHead
+from tclip.modules import ImageEncoder_resnet, ImageEncoder_ViT, TextEncoder, ProjectionHead
 
 
 
@@ -29,12 +29,12 @@ class CLIPModel(nn.Module):
     ):
         super().__init__()
         projection_dim = 256
-        if lang == 'it':
-            image_embedding = 2048
-            self.image_encoder = ImageEncoder_resnet(pretrained=pretrained)
-        else:
-            image_embedding=768
-            self.image_encoder = ImageEncoder_ViT(pretrained=pretrained)
+        # if lang == 'it':
+        #     image_embedding = 2048
+        #     self.image_encoder = ImageEncoder_resnet(pretrained=pretrained)
+        # else:
+        image_embedding=768
+        self.image_encoder = ImageEncoder_ViT(pretrained=pretrained)
         self.text_encoder = TextEncoder(lang, model_name, pretrained=pretrained)
         # self.image_projection = nn.Linear(image_embedding, projection_dim)
         # self.text_projection = nn.Linear(text_embedding, projection_dim)
@@ -65,7 +65,7 @@ class CLIPModel(nn.Module):
         logits = (image_embeddings @ text_embeddings.T) * np.exp(self.temperature)
         return logits
 
-    def forward_v0(self, batch):
+    def forward_v1(self, batch):
         image_embeddings, text_embeddings = self.get_embeddings(batch)
         # Calculating the Loss
         logits = (image_embeddings @ text_embeddings.T) * np.exp(self.temperature)

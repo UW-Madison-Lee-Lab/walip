@@ -65,3 +65,42 @@ def log(logf, msg, console_print=True):
     logf.write(msg + '\n')
     if console_print:
         print(msg)
+
+
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group["lr"]
+
+# class AvgMeter:
+#     def __init__(self, name="Metric"):
+#         self.name = name
+#         self.reset()
+
+#     def reset(self):
+#         self.avg, self.sum, self.count = [0] * 3
+
+#     def update(self, val, count=1):
+#         self.count += count
+#         self.sum += val * count
+#         self.avg = self.sum / self.count
+
+#     def __repr__(self):
+#         text = f"{self.name}: {self.avg:.4f}"
+#         return text
+
+
+
+# def accuracy(output, target, topk=(1,)):
+#     """Computes the precision@k for the specified values of k"""
+#     maxk = max(topk)
+#     batch_size = target.size(0)
+
+#     _, pred = output.topk(maxk, 1, True, True)
+#     pred = pred.t()
+#     correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+#     res = []
+#     for k in topk:
+#         correct_k = correct[:k].flatten().float().sum(0)
+#         res.append(correct_k.mul_(100.0 / batch_size))
+#     return res

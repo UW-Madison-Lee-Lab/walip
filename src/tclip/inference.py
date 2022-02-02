@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from datetime import date
 
 def get_image_embeddings(model, valid_loader, device):
     valid_image_embeddings = []
@@ -37,5 +38,5 @@ def find_matches(model, tokenizer, image_embeddings, query, image_filenames, n=9
         ax.imshow(image)
         ax.axis("off")
     
-    plt.savefig(f'../../results/plots/answer_{lang}.png')
+    plt.savefig(f'../results/plots/answer_{lang}_{date.today()}.png')
    

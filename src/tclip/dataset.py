@@ -19,7 +19,7 @@ def prepare_dataframe(lang, captions_path):
     if lang == 'es':
         df = pd.read_csv(f"{captions_path}", encoding = 'utf-8-sig')
     else:
-        df = pd.read_csv(f"{captions_path}", sep='@')
+        df = pd.read_csv(f"{captions_path}")
 
     x = list(set(df['image_id'].values))
     image_ids = np.arange(0, len(x))
@@ -38,16 +38,23 @@ def prepare_dataframe(lang, captions_path):
 def build_loaders(df, mode, params):
     image_ids = df["image_id"].values
     image_filenames = [f"{params.image_path}/{params.image_prefix}{str(image_ids[i]).zfill(12)}.jpg" for i in range(len(image_ids))] 
-    if params.lang == 'it':
-        dataset = CLIPDataset_resnet(
-            image_filenames,
-            df["caption"].values,
-        )
-    else:
-        dataset = CLIPDataset_ViT(
-            image_filenames,
-            df["caption"].values,
-        )
+    # not_avai = []
+    # for i in range(len(image_ids)):
+    #     if not os.path.isfile(image_filenames[i]):
+    #         not_avai.append(i)
+    # df = df.drop(df.index[not_avai])
+    # image_ids = df["image_id"].values
+    # image_filenames = [f"{params.image_path}/{params.image_prefix}{str(image_ids[i]).zfill(12)}.jpg" for i in range(len(image_ids))] 
+    # if params.lang == 'it':
+    #     dataset = CLIPDataset_resnet(
+    #         image_filenames,
+    #         df["caption"].values,
+    #     )
+    # else:
+    dataset = CLIPDataset_ViT(
+        image_filenames,
+        df["caption"].values,
+    )
 
     dataloader = torch.utils.data.DataLoader(
         dataset,
