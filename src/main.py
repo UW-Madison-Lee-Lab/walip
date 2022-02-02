@@ -19,6 +19,9 @@ import argparse
 
 os.environ['TOKENIZERS_PARALLELISM'] = "false"
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+
 # main
 parser = argparse.ArgumentParser(description='Unsupervised Word Translation')
 parser.add_argument("--seed", type=int, default=-1, help="Initialization seed")

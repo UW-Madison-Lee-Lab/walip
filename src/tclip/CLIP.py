@@ -59,6 +59,11 @@ class CLIPModel(nn.Module):
         text_embeddings = self.text_projection(text_features)
         return image_embeddings, text_embeddings
     
+    def multilabel_classify(self, images, text_features):
+        image_features = self.image_encoder(images)
+        image_embeddings = self.image_projection(image_features)
+        return image_embeddings @ text_features.T * np.exp(self.temperature)
+
     def classify(self, batch):
         image_embeddings, text_embeddings = self.get_embeddings(batch)
         # Calculating the Loss
