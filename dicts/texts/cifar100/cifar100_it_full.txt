@@ -4,8 +4,8 @@ bambino
 orso
 castoro
 letto
-Ape
-scarafaggio
+ape
+coleottolo
 bicicletta
 bottiglia
 ciotola

@@ -1,0 +1,10 @@
+avión
+automóvil
+pájaro
+gato
+ciervo
+perro
+rana
+caballo
+embarcacion
+camión
