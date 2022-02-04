@@ -5,7 +5,7 @@ import transformers
 
 
 class MultilingualClip(torch.nn.Module):
-    def __init__(self, model_name, tokenizer_name, head_name, weights_dir='../data/weights/'):
+    def __init__(self, model_name, tokenizer_name, head_name, weights_dir='../dataset/weights/'):
         super().__init__()
         self.model_name = model_name
         self.tokenizer_name = tokenizer_name
@@ -22,6 +22,9 @@ class MultilingualClip(torch.nn.Module):
         att = txt_tok['attention_mask']
         embs = (embs * att.unsqueeze(2)).sum(dim=1) / att.sum(dim=1)[:, None]
         return self.clip_head(embs)
+
+    def encode_text(self, txt):
+        return self.forward(txt)
 
     def _load_head(self):
         with open(self.head_path, 'rb') as f:

@@ -1,1 +1,1 @@
-python train_clip.py --resume --lang en
+python train_clip.py --resume --lang en 

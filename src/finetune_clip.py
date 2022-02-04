@@ -1,14 +1,14 @@
 import os
 from tqdm import tqdm
 import torch
-
+import torch.nn.functional as F
 from transformers import logging
 
-from tclip.CLIP import CLIPModel
-from tclip.clip_ops import AverageMeter, evaluate_classification#, get_lr
+from tclip.CLIP import CLIPModel, NewCLIPModel
+from tclip.clip_ops import AverageMeter, evaluate_classification, validate, load_image_and_class
 from tclip.inference import get_image_embeddings, find_matches
 from tclip.dataset import load_data, prepare_dataframe, build_loaders
-from models.ops import get_tokenizer
+from models.ops import load_models
 import configs
 
 import argparse
@@ -19,9 +19,9 @@ os.environ['TOKENIZERS_PARALLELISM'] = "false"
 # main
 parser = argparse.ArgumentParser(description='Training clip')
 parser.add_argument("--seed", type=int, default=-1, help="Initialization seed")
-parser.add_argument("--batch_size", type=int, default=8)
-parser.add_argument("--num_workers", type=int, default=2)
-parser.add_argument("--lr", type=float, default=1e-3)
+parser.add_argument("--batch_size", type=int, default=512)
+parser.add_argument("--num_workers", type=int, default=4)
+parser.add_argument("--lr", type=float, default=0.003)
 parser.add_argument("--weight_decay", type=float, default=1e-4)
 parser.add_argument("--patience", type=int, default=2)
 parser.add_argument("--factor", type=float, default=0.5)
@@ -41,7 +41,7 @@ parser.add_argument("--max_length", type=int, default=200)
 parser.add_argument("--text_encoder_model", type=str, default="distilbert-base-uncased")
 parser.add_argument("--text_tokenizer", type=str, default="distilbert-base-uncased")
 
-parser.add_argument("--lang", type=str, default='en', help="Source language")
+parser.add_argument("--lang", type=str, default='it', help="Source language")
 parser.add_argument("--data", type=str, default='coco', help="Source language")
 parser.add_argument("--data_dir", type=str, default='../dataset', help="Source language")
 
@@ -62,16 +62,17 @@ params.image_prefix = configs.image_prefixes[params.lang]
 params.device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 
 
+    
 
-def train_epoch(model, tokenizier, train_loader, optimizer, lr_scheduler, step):
+def train_epoch(model, train_loader, optimizer, lr_scheduler, step):
     loss_meter = AverageMeter()
     tqdm_object = tqdm(train_loader, total=len(train_loader))
+    model.mapping.train()
     for batch in tqdm_object:
-        text_tokens = tokenizer(batch['caption'], padding=True, truncation=True,max_length=params.max_length)
-        batch['image'] = batch['image'].to(params.device)
-        for k, v in text_tokens.items():
-            batch[k] = torch.tensor(v).to(params.device)
-        loss = model(batch)
+        images = batch['image'].to(params.device)
+        texts = batch['caption']
+        
+        loss = model.forward(images, texts)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -79,26 +80,20 @@ def train_epoch(model, tokenizier, train_loader, optimizer, lr_scheduler, step):
         count = batch["image"].size(0)
         loss_meter.update(loss.item(), count)
 
-        tqdm_object.set_postfix(train_loss=loss_meter.avg, lr=get_lr(optimizer))
+        tqdm_object.set_postfix(train_loss=loss_meter.avg)
 
         torch.cuda.empty_cache()
     lr_scheduler.step()
     return loss_meter
 
 
-def valid_epoch(model, tokenizer, valid_loader):
+def valid_epoch(model, valid_loader):
     loss_meter = AverageMeter()
     tqdm_object = tqdm(valid_loader, total=len(valid_loader))
     for batch in tqdm_object:
-        text_tokens = tokenizer(batch['caption'], padding=True, truncation=True,max_length=params.max_length)
-        batch['image'] = batch['image'].to(params.device)
-        for k, v in text_tokens.items():
-            batch[k] = torch.tensor(v).to(params.device)
-        loss = model(batch)
-
+        loss = model.forward(batch['image'].to(params.device), batch['caption'])
         count = batch["image"].size(0)
         loss_meter.update(loss.item(), count)
-
         tqdm_object.set_postfix(valid_loss=loss_meter.avg)
     return loss_meter
 
@@ -114,45 +109,36 @@ def validate(model, tokenizer, params):
         valid_loss = valid_epoch(model, tokenizer, valid_loader)
     print("val_loss: {:.4f}".format(valid_loss.avg))
 
-def train(model, tokenizer, params):
-    logf = open(f'../results/logs/{params.data}_{params.lang}.out', 'w')
+def train(model, params):
+    logf = open(f'../results/logs/finetune_{params.data}_{params.lang}.out', 'w')
     print("Training model")
     train_loader, valid_loader = load_data(params)
-    # optimizer = torch.optim.AdamW(
-        # model.parameters(), lr=params.lr, weight_decay=params.weight_decay
-    # )
-    optimizer = torch.optim.SGD(model.parameters(), params.lr)
+
+    # text_embeddings, dataloader = load_image_and_class(model, preprocess, image_data, lang, opts)
     
-    # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-    #     optimizer, mode="min", patience=params.patience, factor=params.factor
-    # )
-    # lambda1 = lambda epoch: epoch // 30
-    lambda2 = lambda epoch: 0.95 ** epoch
-    # lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda2)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.8)
-    # lr_scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0002, max_lr=0.002,step_size_up=5,mode="triangular")
+    # optimizer = torch.optim.SGD(model.mapping.parameters(), params.lr)
+    optimizer = torch.optim.AdamW(
+        model.mapping.parameters(), lr=params.lr, weight_decay=params.weight_decay
+    )
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.9)
     step = "epoch"
 
     best_loss = float('inf')
     for epoch in range(params.epochs):
         print(f"Epoch: {epoch + 1}")
-        model.train()
-        train_loss = train_epoch(model, tokenizer, train_loader, optimizer, lr_scheduler, step)
-        model.eval()
+        train_loss = train_epoch(model, train_loader, optimizer, lr_scheduler, step)
+        model.mapping.eval()
         with torch.no_grad():
-            valid_loss = valid_epoch(model, tokenizer, valid_loader)
+            valid_loss = valid_epoch(model, valid_loader)
         
         if valid_loss.avg < best_loss:
             best_loss = valid_loss.avg
-            torch.save(model.state_dict(), params.model_path)
+            torch.save(model.mapping.state_dict(), params.model_path)
             log_write(logf, "Saved Best Model!")
         
         log_write(logf, "epoch {} train_loss: {:.4f} val_loss: {:.4f}".format(epoch, train_loss.avg, valid_loss.avg))
 
-def evaluate(model, tokenizer, params):
-    model.eval()
-    print("Evaluating classification!")
-    evaluate_classification(model, tokenizer, params)
+    
 
 
 def inference(query, model, tokenizer, params):
@@ -187,24 +173,26 @@ def inference(query, model, tokenizer, params):
 
 if __name__ == "__main__":
     print("Model on " + params.lang)
-    params.model_path = f"../results/clips/{params.data}/best_{params.lang}.pt"
-    tokenizer = get_tokenizer(params.lang, params.model_name) # will be trained?
+    params.model_path = f"../results/clips/{params.data}/mapping_{params.lang}.pt"
 
-    model = CLIPModel(params.lang, params.model_name, not params.resume, temperature=params.temperature).to(params.device)
+    model_name = configs.model_names[params.lang]
+    student_model, _, _ = load_models(params.lang, model_name, clip_data='coco', device='cuda', large_model=False)
+    teacher_model, logit_scale, preprocess = load_models('en', model_name, clip_data='coco', device='cuda', large_model=True)
+
+    mapping = torch.nn.Linear(256, 512).to(params.device)
+    
     if params.resume:
-        model.load_state_dict(torch.load(params.model_path))
+        mapping.load_state_dict(torch.load(params.model_path))
+    image_encoder = lambda queries: teacher_model.encode_image(queries)
+    model = NewCLIPModel(image_encoder, student_model.text_encoder, student_model.text_projection, mapping, student_model.tokenizer, params.device)
 
     if params.is_train:
-        train(model, tokenizer, params)
+        train(model, params)
     else:
-        model.eval()
-        # validate(model, tokenizer, params)
-
-        # evaluate(model, tokenizer, params)
-        if params.lang == 'en':
-            # query = "a bus sitting next to the building"
-            query = "This is the photo of a giraffe"
-        else:
-            # query = "un autobus seduto accanto a un edificio"
-            query = "una foto di un giraffa"
-        inference(query, model, tokenizer, params)
+        params.data_mode = 'test'
+        params.word_data = 'cifar10'
+        params.image_data = 'cifar10'
+        params.txt_dir = f'../dicts/texts/{params.word_data}/'
+        params.num_prompts = 1
+        model.mapping.eval()
+        evaluate_classification(params.image_data, params.lang, params, model)

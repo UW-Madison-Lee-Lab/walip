@@ -36,12 +36,13 @@ parser.add_argument("-e", "--emb_type", type=str, default="fp", \
     help="type of embedding: fingerprint, cliptext, fasttext")
 # data
 parser.add_argument("--src_lang", type=str, default='en', help="Source language")
-parser.add_argument("--tgt_lang", type=str, default='it', help="Target language")
-parser.add_argument("-analysis", action='store_true', help="Analysis mode")
-parser.add_argument("-preprocess", action='store_true', help="Analysis mode")
+parser.add_argument("--tgt_lang", type=str, default='sw', help="Target language")
+parser.add_argument("-large_model", action='store_true', help="Analysis mode")
+parser.add_argument("--work_mode", type=str, default='translation', help="Analysis mode")
 
 parser.add_argument("--num_images", type=int, default=1, help="Number of imager per class")
 parser.add_argument("--num_prompts", type=int, default=1, help="Number of text prompts")
+parser.add_argument("--batch_size", type=int, default=64, help="Number of imager per class")
 
 parser.add_argument("-supervised", action='store_true', help="")
 parser.add_argument("-reuse_embedding", action='store_true', help="")
@@ -82,25 +83,70 @@ def prepare_embeddings(data_mode):
         word2ids[l] = get_word2id(vocabs[l])
         embs[l] = ClipEmbedding(params.emb_type, params.langs[l], data_mode, params).load_embedding(vocabs[l])
         embs[l] = torch.from_numpy(embs[l]).to(params.device)
+        # embs[l] = F.normalize(embs[l], dim=1)
     return word2ids, embs
 
  ###============= Supervised Learning =============##########
+
+
 
 def eval(dico, embs):
     print('\n..... Evaluating ..... ', params.word_data, params.emb_type, params.sim_score, params.matching_method)        
 
     ###============= Similarity Calculation =============##########
+    # from IPython import embed; embed()
     if params.sim_score in ['csls', 'cosine']:
         scores = get_csls_word_translation(dico, embs['src'], embs['tgt'], params.sim_score)
     elif params.sim_score == 'inner_prod':
         test_emb0 = embs['src'][dico[:, 0]]
         test_emb1 = embs['tgt'][dico[:, 1]]
         scores = test_emb0 @ test_emb1.T 
+    elif params.sim_score == 'ranking':
+        ranks = {}
+        for l in ['src', 'tgt']:
+            ranks[l] = torch.topk(embs[l], 10, dim=1)[1].cpu().numpy()
+
+        def similarity(a, b):
+            s = 0
+            for i in range(10):
+                if a[i] in b:
+                    j = np.where(b == a[i])[0]
+                    s += (10 - i) * (10 - j)
+            return s
+
+        N = len(ranks['src'])
+        scores = np.zeros((N, N))
+        for k in range(N):
+            for m in range(N):
+                scores[k, m] = similarity(ranks['src'][k, :], ranks['tgt'][m, :])
+        col_ind = scores.argmax(axis=1)
+        # filter 
+        threshold = 200
+        count = 0
+        total = 0
+        for i in range(len(scores)):
+            if scores[i][col_ind[i]] > threshold:
+                total += 1
+                if col_ind[i] == i:
+                    count += 1
+        print(count, total, count/total*100)
+        from IPython import embed; embed()
 
     ###============= Matching Algorithm =============##########
     if params.matching_method == 'nn':
         results = get_topk_translation_accuracy(dico, scores)
         print(results)
+        lstp = []
+        s = scores.max(dim=1)
+        correct, total = 0, 0
+        for i in range(len(scores)):
+            if s[0][i] > 0:
+                lstp.append(i)
+                total +=1
+                if s[1][i] == i:
+                    correct += 1
+        print("Precision@1 ", correct, total, correct/total)
+        from IPython import embed; embed()
     elif params.matching_method == 'hungarian':
         cost = -scores.cpu().numpy()
         dico = dico.cpu()    
@@ -235,20 +281,45 @@ def refinement(W, embs):
     return W
 
 
-if params.analysis:
+if params.work_mode == 'analysis':
     # evaluate_classification(params.image_data, params.src_lang, params)
-    # evaluate_classification(params.image_data, params.tgt_lang, params)
-    evaluate_multiclass_classification(params.image_data, params.tgt_lang, params)
-elif params.preprocess:
+    evaluate_classification(params.image_data, params.tgt_lang, params)
+    # evaluate_multiclass_classification(params.image_data, params.tgt_lang, params)
+elif params.work_mode == 'preprocess':
     from utils.filter_images import find_correct_images, find_interesection
     find_correct_images(params.src_lang, params)
     find_correct_images(params.tgt_lang, params)
     find_interesection(params.image_data, params)
+elif params.work_mode == 'retrieval':
+    from scipy.special import softmax
+    # give an image 
+    # load image embeddings
+    vocabs, sims, indices = {}, {}, {}
+    for l in ['src', 'tgt']:
+        vocabs[l] = load_vocabs(params, params.langs[l])
+        embObj = ClipEmbedding(params.emb_type, params.langs[l], params.data_mode, params)
+        txt_embs = embObj.load_clip_txt_emb(vocabs[l])
+        img_embs = embObj.load_clip_img_emb().cpu().numpy()
+        # embs[l] = torch.from_numpy(embs[l]).to(params.device)
+        N = len(img_embs)
+        sims[l] = img_embs @ txt_embs.T
+        sims[l] = softmax(sims[l], axis=1)
+        indices[l] = np.argmax(sims[l], axis=1)
+
+    # looks at all words embedding: -> find the closest 
+    count = 0
+    for i in range(N):
+        a, b = indices['src'][i], indices['tgt'][i]
+        sim_a, sim_b = sims['src'][i][a], sims['tgt'][i][b],
+        print( a, b, sim_a, sim_b, vocabs['src'][a], vocabs['tgt'][b])
+        if indices['src'][i] == indices['tgt'][i]:
+            count+= 1
+    print('Correctness {:.4f}'.format(count/N))
 else:
     print("..... Prepare embeddings ..... ")
     if params.supervised:
         # training
-        word2ids, embs_train = prepare_embeddings('val')
+        word2ids, embs_train = prepare_embeddings('test')
         # test
         # get the training set:
         # test_id1 = dico[:, 0]
@@ -267,15 +338,16 @@ else:
         # evaluate test
         # W = np.load('../dicts/best_W.npy', allow_pickle=True)
         # W = torch.Tensor(W).cuda()
-        # params.word_data = 'wiki'
-        # params.txt_dir = params.dict_pth + f'texts/{params.word_data}/'
+        params.word_data = 'noun'
+        params.txt_dir = params.dict_pth + f'texts/{params.word_data}/'
         word2ids, embs = prepare_embeddings(params.data_mode)
         embs['src'] = embs['src'] @ W.T
     else:
         ##### Vocabularies
         word2ids, embs = prepare_embeddings(params.data_mode)
+    embs['src']= embs['src'].type(torch.cuda.FloatTensor)
+    # test(word2ids, {'src': embs['tgt'], 'tgt': embs['tgt']})
     test(word2ids, embs)
-    from IPython import embed; embed()
     
 
     ###============= Translation =============##########

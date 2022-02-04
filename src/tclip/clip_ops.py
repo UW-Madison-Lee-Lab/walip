@@ -1,62 +1,61 @@
-import torch
+import torch, sys
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from utils.text_loader import load_vocabs
-from utils.image_loader import ViTDataset, load_image_dataset
+from utils.image_loader import load_image_dataset
 from utils.helper import AverageMeter, accuracy
 from models.templates import prompts, generate_texts
-from models.ops import get_tokenizer, load_models
+from models.ops import load_models
 import configs
 from tqdm import tqdm
 
 
-
-def load_image_and_class(image_data, lang, opts):
-    vit_image_dataset = load_image_dataset(image_data)
-    # from torchvision.datasets import CIFAR100
-    # image_dataset = CIFAR100('../dataset/', download=True, train=False)
-    # vit_image_dataset = ViTDataset(image_dataset)
-    dataloader = DataLoader(vit_image_dataset, batch_size=8, shuffle=False, drop_last=True, num_workers=4)
-
+def load_image_and_class(model, preprocess, image_data, lang, opts):
     vocab = load_vocabs(opts, lang)
     texts = generate_texts(prompts[lang], vocab, k=opts.num_prompts)
 
-    model_name = configs.model_names[lang]
-    tokenizer = get_tokenizer(lang, model_name)
-    model, logit_scale = load_models(lang, model_name, 'coco', opts.device) 
-    # model = model.to(opts.device)   
-
-    text_tokens = tokenizer(texts, padding=True, truncation=True,max_length=200)
-    item = {key: torch.tensor(values).to(opts.device) for key, values in text_tokens.items()}
     with torch.no_grad():
-        text_features = model.text_encoder(
-            input_ids=item["input_ids"], attention_mask=item["attention_mask"]
-        )
-        text_embeddings = model.text_projection(text_features)
-        text_embeddings = F.normalize(text_embeddings, dim=-1)
+        text_embeddings = model.encode_text(texts)
+        text_embeddings = text_embeddings.view(-1, opts.num_prompts, text_embeddings.shape[-1])
+        text_embeddings = text_embeddings.mean(dim=1)
 
-    return model, text_embeddings, dataloader
+    image_dataset = load_image_dataset(image_data, preprocess=preprocess)
+    dataloader = DataLoader(image_dataset, batch_size=opts.batch_size, shuffle=False, drop_last=True, num_workers=4)
+
+    return text_embeddings, dataloader
 
 
-def evaluate_classification(image_data, lang, opts):
-    model, text_embeddings, dataloader = load_image_and_class(image_data, lang, opts)
+def evaluate_classification(image_data, lang, opts, model=None):
+    if model is None:
+        model_name = configs.model_names[lang]
+        model, logit_scale, preprocess = load_models(lang, model_name, 'coco', opts.device, opts.large_model) 
+    else:
+        preprocess = None
+    text_embeddings, dataloader = load_image_and_class(model, preprocess, image_data, lang, opts)
+    validate(model, text_embeddings, dataloader, opts.device)
+
+def validate(model, text_embeddings, dataloader, device):
+    text_embeddings = text_embeddings.type(torch.cuda.FloatTensor)
     tqdm_object = tqdm(dataloader, total=len(dataloader))
     top5, top1 = AverageMeter(), AverageMeter()
     for (images, labels) in tqdm_object:
         # print(batch_idx)
-        labels = labels.long().to(opts.device)
-        images = images.to(opts.device)
-        image_features = model.image_encoder(images)
-        image_embeddings = model.image_projection(image_features)
-        image_embeddings = F.normalize(image_embeddings, dim=-1)
+        labels = labels.long().to(device)
+        with torch.no_grad():
+            image_embeddings = model.encode_image(images.to(device))
+            image_embeddings = image_embeddings.type(torch.cuda.FloatTensor)
         logits = image_embeddings @ text_embeddings.T
         _, pred = logits.topk(1, 1, True, True)
         pred = pred.t()
         precs = accuracy(logits, labels, topk=(1, 5))
         top1.update(precs[0].item(), images.size(0))
         top5.update(precs[1].item(), images.size(0))
+        # sys.stdout.write("Top1 {:.4f} Top5: {:.4f}".format(top1.avg, top5.avg)) 
+        # sys.stdout.flush() 
+        tqdm_object.set_postfix(top1_acc=top1.avg)
+        torch.cuda.empty_cache()
 
-    print("Classification on", image_data, lang, top1.avg, top5.avg)
+    print("Classification on", top1.avg, top5.avg)
 
 
 

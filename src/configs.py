@@ -7,24 +7,28 @@ clip_names = {'en': "ViT-B/32",
 model_names = {
     "en": "bert-base-uncased",
     "es": "../pretrained/uncased/",
-    "it": "dbmdz/bert-base-italian-uncased"
+    "it": "dbmdz/bert-base-italian-uncased",
+	'sw': 'something'
 }
 
 image_folders = {
     "en": "train2014",
     "es": "spanish_images",
     "it": "train2014",
+	"sw": ''
 }
 
 image_prefixes = {
     'en': 'COCO_train2014_',
     'es': '',
-    'it': 'COCO_train2014_'
+    'it': 'COCO_train2014_',
+	'sw': ''
 }
 caption_names = {
     "en": "processed_captions_train2014.csv",
     "es": "es/",
     "it": "processed_captions_train2014.csv",
+	"sw": ''
 }
 
 
@@ -71,7 +75,6 @@ flags = {
 	"reuse_text_embedding": True, 
 }
 
-langs = {'src': 'en', 'tgt': 'it'}
 image_batchsizes = {'imagenet':4, 'cifar100': 128, 'cifar10':128}
 
 

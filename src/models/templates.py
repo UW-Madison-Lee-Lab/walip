@@ -1,8 +1,8 @@
 
 eng_templates = [
-    "a photo of a {}.",
-    "a blurry photo of a {}.",
-    "a black and white photo of a {}.",
+    "This is a photo of a {}.",
+    "This is a blurry photo of a {}.",
+    "This is a black and white photo of a {}.",
     "a low contrast photo of a {}.",
     "a high contrast photo of a {}.",
     "a bad photo of a {}.",
@@ -61,10 +61,33 @@ fre_templates = [
      "une photo du petit {}.",
      "une photo du grand {}.",
 ]
+
+sw_templates = [
+    "Detta är ett foto av en {}.",
+    "Detta är ett suddigt foto av en {}.",
+    "Detta är ett svartvitt foto av en {}.",
+    "ett lågkontrastfoto av en {}.",
+    "ett högkontrastfoto av en {}.",
+    "ett dåligt foto av en {}.",
+    "ett bra foto av en {}.",
+    "ett foto på en liten {}.",
+    "ett foto av en stor {}.",
+    "ett foto av {}.",
+    "ett suddigt foto av {}.",
+    "ett svartvitt foto av {}.",
+    "ett lågkontrastfoto av {}.",
+    "ett högkontrastfoto av {}.",
+    "ett dåligt foto av {}.",
+    "ett bra foto av {}.",
+    "ett foto på den lilla {}.",
+    "ett foto på den stora {}.",
+]
+
 prompts = {
     'en' : eng_templates,
     'it': ita_templates,
-    'fr': fre_templates
+    'fr': fre_templates,
+    'sw': sw_templates,
 }
 
 def generate_texts(template, vocabs, k=-1):

@@ -29,6 +29,8 @@ from transformers.utils import logging
 logger = logging.get_logger(__name__)
 
 jax.config.update('jax_platform_name', 'cpu')
+# jax.config.update('jax_platform_name', 'gpu')
+
 
 class FlaxHybridCLIPModule(nn.Module):
     config: HybridCLIPConfig

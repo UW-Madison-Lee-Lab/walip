@@ -4,9 +4,8 @@ import numpy as np
 
 import torch
 from torch.utils.data import DataLoader
-from utils.image_loader import load_vocabs, load_image_dataset
-from models.ops import get_tokenizer, load_models
-from models.templates import prompts, generate_texts
+from models.ops import load_models
+from tclip.clip_ops import load_image_and_class
 from tqdm import tqdm
 import torch.nn.functional as F
 from utils.helper import AverageMeter, accuracy
@@ -17,42 +16,18 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def find_correct_images(lang, opts):
     nclasses = configs.num_classes[opts.image_data]
-    bs = configs.image_batchsizes[opts.image_data]
-
-    vocab = load_vocabs(opts, lang)	#CIFAR10
-    texts = generate_texts(prompts[lang], vocab, k=opts.num_prompts)
     model_name = configs.model_names[lang]
-
-    model, logit_scale = load_models(lang, model_name, 'coco', opts.device)
-    tokenizer = get_tokenizer(lang, model_name)
-    text_tokens = tokenizer(texts, padding=True, truncation=True,max_length=200)
-    item = {key: torch.tensor(values).to(opts.device) for key, values in text_tokens.items()}
-    with torch.no_grad():
-        text_features = model.text_encoder(
-            input_ids=item["input_ids"], attention_mask=item["attention_mask"]
-        )
-        text_features = model.text_projection(text_features)
-
-    image_dataset = load_image_dataset(opts.image_data)
-    dataloader = DataLoader(image_dataset, batch_size=bs, shuffle=False, drop_last=False, num_workers=4)
+    model, logit_scale, preprocess = load_models(lang, model_name, 'coco', opts.device, opts.large_model)
+    text_features, dataloader = load_image_and_class(model, preprocess, opts.image_data, lang, opts)
     tqdm_object = tqdm(dataloader, total=len(dataloader))
-
     indices = {}
     s, total, batch_idx = 0, 0, 0
     top5, top1 = AverageMeter(), AverageMeter()
     for (images, labels) in tqdm_object:
-        targets = labels.long().cuda()
+        targets = labels.long().to(opts.device)
         with torch.no_grad():
-            image_features = model.image_encoder(images.cuda()).float()
-            image_features = model.image_projection(image_features)
-            # if is_eng_clip:
-            #     image_features = image_model.encode_image(images.cuda()).float()
-            # else:
-            #     image_features = image_model(images)
-            #     image_features = torch.from_numpy(image_features).cuda()
-            # image_features /= image_features.norm(dim=-1, keepdim=True)
-            image_features = F.normalize(image_features, dim=-1)
-        logits = image_features @ text_features.t()
+            image_features = model.encode_image(images.to(opts.device))
+        logits = image_features @ text_features.t() * logit_scale
         _, pred = logits.topk(1, 1, True, True)
         pred = pred.t()
         correct = pred.eq(targets.view(1, -1).expand_as(pred))
@@ -68,7 +43,7 @@ def find_correct_images(lang, opts):
             t = labels[x].item()
             if t not in indices:
                 indices[t] = []
-            indices[t].append(x + batch_idx * bs)
+            indices[t].append(x + batch_idx * opts.batch_size)
         batch_idx += 1
 
     fname = os.path.join(opts.img_dir, f'{opts.image_data}_{lang}_correct_index')

@@ -3,13 +3,15 @@ import os, sys
 import numpy as np
 from tqdm import tqdm
 from PIL import Image
-
+from torchvision.datasets import CIFAR100, CIFAR10, ImageFolder
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from torchvision.transforms import CenterCrop, Normalize, Resize, ToTensor
 from torchvision.transforms.functional import InterpolationMode
 from transformers import ViTFeatureExtractor
 import cv2
+import pandas as pd
+
 import configs
 
 
@@ -46,39 +48,35 @@ class ViTDataset(Dataset):
         return img['pixel_values'][0], self.targets[index]
 
 
-def load_image_dataset(image_name, data_dir='../dataset'):
+def load_image_dataset(image_name, data_dir='../dataset', preprocess = None):
     print('.....', '.....', '.....', "Load image dataset ", image_name)
-    preprocess = transforms.Compose([
-        Resize([224], interpolation=InterpolationMode.BICUBIC),
-        CenterCrop(224),
-        ToTensor(),
-        Normalize(configs.means[image_name], configs.stds[image_name]),
-    ])
-
+    
     if image_name.startswith('cifar'):
-        preprocess = None
         if image_name == 'cifar100':
-            from torchvision.datasets import CIFAR100
             image_dataset = CIFAR100(data_dir, transform=preprocess, download=True, train=False)
         elif image_name == 'cifar10':
-            from torchvision.datasets import CIFAR10
             image_dataset = CIFAR10(data_dir, transform=preprocess, download=True, train=False)
-
-        image_dataset = ViTDataset(image_dataset)
+        if preprocess is None:
+            image_dataset = ViTDataset(image_dataset)
 
     elif image_name in ['tiny', 'imagenet']:
-        import h5py as h5
-        data_dir = '~/scratch/tprojects/repgan/data/'
-        hdf5_path = data_dir + f'{image_name}/{image_name}_valid.h5'
-        if os.path.isfile(hdf5_path):
-            print('Loading %s into memory...' % hdf5_path)
-            with h5.File(hdf5_path, 'r') as f:
-                imgs = np.asarray(f.get('imgs'))
-                labels = np.asarray(f.get('labels'))
-            image_dataset = ImageDataset(imgs, labels, preprocess)
-        else:
-            from torchvision.datasets import ImageFolder
-            image_dataset = ImageFolder(data_dir + 'imagenet/test/', preprocess)
+        if preprocess is None:
+            preprocess = transforms.Compose([
+                Resize([224], interpolation=InterpolationMode.BICUBIC),
+                CenterCrop(224),
+                ToTensor(),
+                Normalize(configs.means[image_name], configs.stds[image_name]),
+            ])
+        # import h5py as h5
+        # hdf5_path = data_dir + f'{image_name}/{image_name}_valid.h5'
+        # if os.path.isfile(hdf5_path):
+        #     print('Loading %s into memory...' % hdf5_path)
+        #     with h5.File(hdf5_path, 'r') as f:
+        #         imgs = np.asarray(f.get('imgs'))
+        #         labels = np.asarray(f.get('labels'))
+        #     image_dataset = ImageDataset(imgs, labels, preprocess)
+        # else:
+        image_dataset = ImageFolder(os.path.join(data_dir, 'imagenet/val/'), preprocess)
             # imgs = []
             # for i in tqdm(chunks(1, range(len(image_data)))):
             #     imgs.append(image_data[i][0])
@@ -94,18 +92,23 @@ def load_image_dataset(image_name, data_dir='../dataset'):
 
 
 
-def load_image_data(image_name, num_images, using_filtered_images, img_dir):
+def load_image_data(image_name, num_images, using_filtered_images, img_dir, preprocess=None):
     num_classes = configs.num_classes[image_name]
     print('.....', '.....', '.....', "Load image data", image_name, num_images)
     if not image_name == 'coco':
-        image_dataset = load_image_dataset(image_name)
+        image_dataset = load_image_dataset(image_name, preprocess=preprocess)
     print('Load', num_images, 'images from dataset')
     if using_filtered_images:
-        fpath = os.path.join(img_dir, f'{image_name}_en_it_index.npy')
+        fpath = os.path.join(img_dir, f'{image_name}_en_correct_index.npy')
         if os.path.isfile(fpath):
             dct = np.load(fpath, allow_pickle=True).item()
             indices = list(dct.values())
-            images = [image_dataset[idx][0].numpy() for idx in indices]
+            # images = [image_dataset[idx][0].numpy() for idx in indices]
+            images = []
+            for v in indices:
+                idx = v[0]
+                images.append(image_dataset[idx][0].numpy())
+            print('Total: ', len(images))
         else:
             with open(img_dir + image_name + '_index.txt') as f:
                 lines = f.readlines()
@@ -140,13 +143,14 @@ def load_image_data(image_name, num_images, using_filtered_images, img_dir):
                     labels.append(batch[1].numpy())
                 labels = np.stack(labels, axis=0)
                 np.save(label_path, np.asarray(labels))
-            feature_extractor = ViTFeatureExtractor.from_pretrained('google/vit-base-patch16-224-in21k')
+            # feature_extractor = ViTFeatureExtractor.from_pretrained('google/vit-base-patch16-224-in21k')
             for c in range(num_classes):
                 indices = np.argwhere(labels == c)
                 img = image_dataset[indices[0][0]][0]#.numpy()
-                inputs = feature_extractor(img, return_tensors="pt") 
+                # inputs = feature_extractor(img, return_tensors="pt") 
                 # images += [ for i in range(num_images)]
-                images.append(inputs['pixel_values'][0])
+                # images.append(inputs['pixel_values'][0])
+                images.append(img)
         elif image_name == 'coco':
             captions_path = f"../dataset/coco/captions/en/{configs.caption_names['en']}"
             df = pd.read_csv(f"{captions_path}")
@@ -157,7 +161,7 @@ def load_image_data(image_name, num_images, using_filtered_images, img_dir):
             images = []
             indices = np.arange(len(image_ids))
             np.random.shuffle(indices)
-            random_indices = indices[:100] 
+            random_indices = indices[:1000] 
             for k in random_indices:
                 image = cv2.imread(image_filenames[k])
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
