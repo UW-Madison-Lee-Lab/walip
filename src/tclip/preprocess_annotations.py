@@ -1,11 +1,11 @@
 import json
 import pandas as pd
 
-ANNOTATION_PATH = "../../data/coco2017/annotations/captions_val2017.json"
-INSTANCE_FILE_PATH = "../../data/coco2017/annotations/instances_val2017.json"
+ANNOTATION_PATH = "../../dataset/coco/annotations/captions_val2014.json"
+INSTANCE_FILE_PATH = "../../dataset/coco/annotations/instances_val2014.json"
 
-# Saves a @ separated csv to this location:
-SAVE_PATH = "../../data/coco2017/captions/en/processed_captions_val2017.csv"
+# Saves a , separated csv to this location:
+SAVE_PATH = "../../dataset/coco/captions/en/processed_captions_val2014.csv"
 
 with open(ANNOTATION_PATH) as f:
     data = json.load(f)
@@ -38,7 +38,7 @@ for box in data_instance["annotations"]:
     image_info[box['image_id']].append(str(idx))
 
 for image_id in image_info:
-    image_info[image_id] = ",".join(list(set(image_info[image_id])))
+    image_info[image_id] = " ".join(list(set(image_info[image_id])))
 
 # Go through the caption annotations, and add labels to them
 for i in range(len(data["annotations"])):
@@ -51,5 +51,5 @@ for i in range(len(data["annotations"])):
 
 df = pd.DataFrame(data["annotations"])
 df = df[df["labels"].notna()]
-df.to_csv(SAVE_PATH, sep="@")
+df.to_csv(SAVE_PATH, index=False)
 

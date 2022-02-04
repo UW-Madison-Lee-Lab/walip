@@ -1,6 +1,7 @@
 import torch, sys
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+from sklearn import metrics
 from utils.text_loader import load_vocabs
 from utils.image_loader import load_image_dataset
 from utils.helper import AverageMeter, accuracy
@@ -8,9 +9,10 @@ from models.templates import prompts, generate_texts
 from models.ops import load_models
 import configs
 from tqdm import tqdm
+import numpy as np
 
 
-def load_image_and_class(model, preprocess, image_data, lang, opts):
+def load_image_and_class(model, preprocess, image_data, lang, opts, multilabel = False):
     vocab = load_vocabs(opts, lang)
     texts = generate_texts(prompts[lang], vocab, k=opts.num_prompts)
 
@@ -19,7 +21,7 @@ def load_image_and_class(model, preprocess, image_data, lang, opts):
         text_embeddings = text_embeddings.view(-1, opts.num_prompts, text_embeddings.shape[-1])
         text_embeddings = text_embeddings.mean(dim=1)
 
-    image_dataset = load_image_dataset(image_data, preprocess=preprocess)
+    image_dataset = load_image_dataset(image_data, preprocess=preprocess, multilabel = multilabel)
     dataloader = DataLoader(image_dataset, batch_size=opts.batch_size, shuffle=False, drop_last=True, num_workers=4)
 
     return text_embeddings, dataloader
@@ -60,50 +62,50 @@ def validate(model, text_embeddings, dataloader, device):
 
 
 
-def evaluate_multiclass_classification(image_data, lang, opts):
+def evaluate_multilabel_classification(image_data, lang, opts):
     loss = torch.nn.MultiLabelSoftMarginLoss()
-    words = []
-
-    model, text_embeddings, dataloader = load_image_and_class(image_data, lang, opts)
+    model, text_embeddings, dataloader = load_image_and_class(image_data, lang, opts, multilabel=True)
     tqdm_object = tqdm(dataloader, total=len(dataloader))
     model.eval()
 
     total = 0
-    num_batches = 0
+    num_examples = 0
     
-    gts = {i:[] for i in range(0, 80)}
-    preds = {i:[] for i in range(0, 80)}
+    gts = {i:[] for i in range(0, configs.num_classes[image_data])}
+    preds = {i:[] for i in range(0, configs.num_classes[image_data])}
     with torch.no_grad():
-        for batch in tqdm_object:
-            labels = batch["labels"].to(opts.device)
-            images = batch["image"].to(opts.device)
+        for (images, labels) in tqdm_object:
+            labels = labels.long().to(opts.device)
+            images = images.to(opts.device)
             
             # Should be of shape (batch_sz, num_classes)
-            logits = model.multilabel_classify(images, text_embeddings)
+            image_features = model.image_encoder(images)
+            image_embeddings = model.image_projection(image_features)
+            image_embeddings = F.normalize(image_embeddings, dim=-1)
+            logits = image_embeddings @ text_embeddings.T * np.exp(model.temperature)
             l = loss(logits, labels).item()
             total += l
-            num_batches += 1
+            num_examples += image_features.size()[0]
             output = torch.sigmoid(logits)
             pred = output.squeeze().data.cpu().numpy()
             gt = labels.squeeze().data.cpu().numpy()
-
-            for label in range(0, 80):
+            for label in range(0, configs.num_classes[image_data]):
                 gts[label].extend(gt[:,label])
                 preds[label].extend(pred[:,label])
 
-    print("Average Multilabel Loss is: {}".format(total/num_batches))
+    print("Average Multilabel Loss is: {}".format(total/num_examples))
     
     FinalMAPs = []
-    for i in range(0, 80):
+    for i in range(0, configs.num_classes[image_data]):
         precision, recall, _ = metrics.precision_recall_curve(gts[i], preds[i])
         FinalMAPs.append(metrics.auc(recall, precision))
 
     # Print AUC for each class
-    indices = [i for i in range(80)]
-    indices = sorted(indices, key = lambda x: FinalMAPs[i])
-    with open("../../results/AUC.txt", "w") as f:
+    indices = [i for i in range(configs.num_classes[image_data])]
+    indices = sorted(indices, key = lambda x: FinalMAPs[x])
+    with open("../results/AUC.txt", "w") as f:
         for idx in indices:
-            f.write("{}: {}\n".format(words[idx], FinalMAPs[idx]))
+            f.write("{}: {}\n".format(idx, FinalMAPs[idx]))
 
 
     
