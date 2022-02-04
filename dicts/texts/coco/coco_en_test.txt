@@ -7,6 +7,10 @@ bus
 train
 truck
 boat
+traffic light
+fire hydrant
+stop sign
+parking meter
 bench
 bird
 cat
@@ -26,9 +30,15 @@ suitcase
 frisbee
 skis
 snowboard
+sports ball
 kite
+baseball bat
+baseball glove
 skateboard
+surfboard
+tennis racket
 bottle
+wine glass
 cup
 fork
 knife
@@ -40,18 +50,22 @@ sandwich
 orange
 broccoli
 carrot
+hot dog
 pizza
 donut
 cake
 chair
 couch
+potted plant
 bed
+dining table
 toilet
 tv
 laptop
 mouse
 remote
 keyboard
+cell phone
 microwave
 oven
 toaster
@@ -61,4 +75,6 @@ book
 clock
 vase
 scissors
+teddy bear
+hair drier
 toothbrush

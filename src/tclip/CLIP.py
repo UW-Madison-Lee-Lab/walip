@@ -5,7 +5,6 @@ import torch.nn.functional as F
 from tclip.modules import ImageEncoder_resnet, ImageEncoder_ViT, TextEncoder, ProjectionHead
 
 
-
 def cross_entropy(preds, targets, reduction='none'):
     log_softmax = nn.LogSoftmax(dim=-1)
     loss = (-targets * log_softmax(preds)).sum(1)

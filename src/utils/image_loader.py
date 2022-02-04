@@ -1,6 +1,7 @@
 
 import os, sys
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from PIL import Image
 
@@ -14,11 +15,12 @@ import configs
 
 
 class ImageDataset(Dataset):
-    def __init__(self, data, labels, transforms=None):
+    def __init__(self, data, labels, transforms=None, multilabel=False):
         super(ImageDataset, self).__init__()
         self.transforms = transforms
         self.data = data
         self.targets = labels
+        self.multilabel = multilabel
 
     def __len__(self):
         return len(self.data)
@@ -28,32 +30,42 @@ class ImageDataset(Dataset):
         label = self.targets[index]
         if self.transforms is not None:
             img = self.transforms(img)
-        label = int(label)
+        if not self.multilabel:
+            label = int(label)
         return img, label
 
 class ViTDataset(Dataset):
-    def __init__(self, dataset):
+    def __init__(self, dataset, convert_image = False):
         super(ViTDataset, self).__init__()
         self.feature_extractor = ViTFeatureExtractor.from_pretrained('google/vit-base-patch16-224-in21k')
         self.data = dataset.data
         self.targets = dataset.targets
+        self.convert_image = convert_image
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, index):
-        img = self.feature_extractor(self.data[index], return_tensors="pt")
+        if self.convert_image:
+            image = cv2.imread(self.data[index])
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            img = np.moveaxis(image, source=-1, destination=0)
+            img = self.feature_extractor(img, return_tensors="pt")
+        else:
+            img = self.feature_extractor(self.data[index], return_tensors="pt")
         return img['pixel_values'][0], self.targets[index]
 
 
-def load_image_dataset(image_name, data_dir='../dataset'):
+def load_image_dataset(image_name, data_dir='../dataset', multilabel=False):
     print('.....', '.....', '.....', "Load image dataset ", image_name)
-    preprocess = transforms.Compose([
-        Resize([224], interpolation=InterpolationMode.BICUBIC),
-        CenterCrop(224),
-        ToTensor(),
-        Normalize(configs.means[image_name], configs.stds[image_name]),
-    ])
+
+    if image_name in configs.means and image_name in configs.stds:
+        preprocess = transforms.Compose([
+            Resize([224], interpolation=InterpolationMode.BICUBIC),
+            CenterCrop(224),
+            ToTensor(),
+            Normalize(configs.means[image_name], configs.stds[image_name]),
+        ])
 
     if image_name.startswith('cifar'):
         preprocess = None
@@ -88,13 +100,25 @@ def load_image_dataset(image_name, data_dir='../dataset'):
             # hf.create_dataset('imgs', data=np.stack(imgs, axis=0))
             # hf.create_dataset('labels', data=np.asarray(labels))
             # hf.close()
+    elif image_name == "coco":
 
+        images, labels = load_image_data(image_name, 10000, False, "./", multilabel = multilabel)
+        image_dataset = ViTDataset(ImageDataset(images, labels, multilabel=True), convert_image=True)
     return image_dataset
 
+# label is in format 1 3 10 with 11 classes converts to -> [0,1,0,1,0,0,0,0,0,0,1]
+def one_hot(label, n_classes):
+    l = np.zeros(n_classes)
+    indices = [int(x) for x in label.split(" ")]
+    l[indices] = 1
+    return l
+
+def get_first_label(label):
+    indices = [int(x) for x in label.split(" ")]
+    return indices[0]
 
 
-
-def load_image_data(image_name, num_images, using_filtered_images, img_dir):
+def load_image_data(image_name, num_images, using_filtered_images, img_dir, multilabel=False):
     num_classes = configs.num_classes[image_name]
     print('.....', '.....', '.....', "Load image data", image_name, num_images)
     if not image_name == 'coco':
@@ -148,22 +172,30 @@ def load_image_data(image_name, num_images, using_filtered_images, img_dir):
                 # images += [ for i in range(num_images)]
                 images.append(inputs['pixel_values'][0])
         elif image_name == 'coco':
+
+            # Expected to have image_id, and labels columns
             captions_path = f"../dataset/coco/captions/en/{configs.caption_names['en']}"
             df = pd.read_csv(f"{captions_path}")
             image_ids = df["image_id"].values
-            image_path = f"../dataset/coco/images/{configs.image_folders['en']}"
-            image_filenames = [f"{image_path}/COCO_train2014_{str(image_ids[i]).zfill(12)}.jpg" for i in range(len(image_ids))] 
-            feature_extractor = ViTFeatureExtractor.from_pretrained('google/vit-base-patch16-224-in21k')
-            images = []
-            indices = np.arange(len(image_ids))
-            np.random.shuffle(indices)
-            random_indices = indices[:100] 
-            for k in random_indices:
-                image = cv2.imread(image_filenames[k])
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                img = np.moveaxis(image, source=-1, destination=0)
-                inputs = feature_extractor(img, return_tensors="pt") # transforms already
-                images.append(inputs['pixel_values'][0]) 
+            if multilabel:
+                labels = df["labels"].apply(lambda x: one_hot(x, configs.num_classes[image_name])).values
+            else:
+                labels = df["labels"].apply(get_first_label).values
             
+
+            indices = np.arange(len(image_ids))
+            np.random.seed(42)
+            np.random.shuffle(indices)
+            image_ids = image_ids[indices]
+            final_labels = labels[indices]
+
+            image_path = f"../dataset/coco/images/{configs.image_folders['en']}"
+            image_filenames = [f"{image_path}/{configs.image_prefixes['en']}{str(image_ids[i]).zfill(12)}.jpg" for i in range(len(image_ids))] 
+            images = image_filenames
+
+            
+ 
+            return images[:num_images], final_labels[:num_images]
         images = np.stack(images, axis=0)
+        
     return images

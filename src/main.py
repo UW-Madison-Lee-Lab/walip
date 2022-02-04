@@ -13,7 +13,7 @@ from evals.word_translation import get_csls_word_translation, build_dictionary, 
 from utils.helper import get_accuracy
 from utils.text_loader import get_word2id, load_vocabs, combine_files, load_vocabs_from_pairs
 from models.embedding import ClipEmbedding
-from tclip.clip_ops import evaluate_classification, evaluate_multiclass_classification
+from tclip.clip_ops import evaluate_classification, evaluate_multilabel_classification
 import configs
 import argparse
 
@@ -42,6 +42,8 @@ parser.add_argument("-preprocess", action='store_true', help="Analysis mode")
 
 parser.add_argument("--num_images", type=int, default=1, help="Number of imager per class")
 parser.add_argument("--num_prompts", type=int, default=1, help="Number of text prompts")
+parser.add_argument("--batch_size", type=int, default=8)
+parser.add_argument("--num_workers", type=int, default=2)
 
 parser.add_argument("-supervised", action='store_true', help="")
 parser.add_argument("-reuse_embedding", action='store_true', help="")
@@ -238,7 +240,9 @@ def refinement(W, embs):
 if params.analysis:
     # evaluate_classification(params.image_data, params.src_lang, params)
     # evaluate_classification(params.image_data, params.tgt_lang, params)
-    evaluate_multiclass_classification(params.image_data, params.tgt_lang, params)
+
+    # For COCO only:
+    evaluate_multilabel_classification(params.image_data, params.src_lang, params)
 elif params.preprocess:
     from utils.filter_images import find_correct_images, find_interesection
     find_correct_images(params.src_lang, params)
