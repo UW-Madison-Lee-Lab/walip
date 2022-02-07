@@ -3,7 +3,7 @@ from torch import nn
 import torchvision
 from transformers import BertForMaskedLM, BertConfig, AutoConfig, AutoModel
 from transformers import ViTModel, ViTConfig, ViTFeatureExtractor
-
+import sys
 
 class ImageEncoder_ViT(nn.Module):
     """
@@ -65,6 +65,9 @@ class TextEncoder(nn.Module):
                 self.model = AutoModel.from_pretrained(model_name, config=config)
             else:
                 self.model = AutoModel.from_config(config)
+        else:
+            print("Not exist!!!")
+            sys.exit("STOP word evaluation!!!!") 
                 
         for p in self.model.parameters():
             p.requires_grad = trainable

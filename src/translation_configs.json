@@ -1,0 +1,33 @@
+{
+  "model": {
+    "src_lang": "en",
+    "tgt_lang": "it"
+ },
+  "words":{ 
+    "word_data" : "wiki",
+    "data_mode" : "test",
+    "num_prompts": 10
+  },
+  "images": {
+    "image_data": "cifar100",
+    "num_images": 10,
+    "using_filtered_images": false
+  },
+
+  "embedding": {
+    "emb_type": "fp",
+    "large_model": true,
+    "reuse_embedding": true,
+    "reuse_text_embedding": true,
+    "reuse_image_embedding": true,
+    "reuse_image_data": true
+  },
+
+  "train": {
+    "work_mode": "retrieval",
+    "supervised": false,
+    "sim_score": "ranking",
+    "matching_method": "no"
+  }
+
+}

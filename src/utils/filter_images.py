@@ -19,6 +19,7 @@ def find_correct_images(lang, opts):
     model_name = configs.model_names[lang]
     model, logit_scale, preprocess = load_models(lang, model_name, 'coco', opts.device, opts.large_model)
     text_features, dataloader = load_image_and_class(model, preprocess, opts.image_data, lang, opts)
+    text_features = F.normalize(text_features, dim=1)
     tqdm_object = tqdm(dataloader, total=len(dataloader))
     indices = {}
     s, total, batch_idx = 0, 0, 0
@@ -27,23 +28,21 @@ def find_correct_images(lang, opts):
         targets = labels.long().to(opts.device)
         with torch.no_grad():
             image_features = model.encode_image(images.to(opts.device))
+            image_features = F.normalize(image_features, dim=1)
         logits = image_features @ text_features.t() * logit_scale
         _, pred = logits.topk(1, 1, True, True)
         pred = pred.t()
-        correct = pred.eq(targets.view(1, -1).expand_as(pred))
-        correct = correct[0]
-        s += correct.sum()
-        total += targets.shape[0]
+        correct = pred.eq(targets.view(1, -1).expand_as(pred))[0].cpu().numpy()
 
         precs = accuracy(logits, targets, topk=(1, 5))
         top1.update(precs[0].item(), images.size(0))
         top5.update(precs[1].item(), images.size(0))
-        inds = np.where(correct.cpu().numpy() == True)[0]
+        inds = np.where(correct == True)[0]
         for x in inds:
             t = labels[x].item()
             if t not in indices:
                 indices[t] = []
-            indices[t].append(x + batch_idx * opts.batch_size)
+            indices[t].append(x + batch_idx * images.size(0))
         batch_idx += 1
 
     fname = os.path.join(opts.img_dir, f'{opts.image_data}_{lang}_correct_index')
@@ -56,7 +55,6 @@ def find_correct_images(lang, opts):
             print(i, 'not in indices')
     f.close()
 
-    print('Classification accuracy: {:.4f}'.format(s/total))
     print(top1.avg, top5.avg)
 
 

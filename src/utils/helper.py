@@ -1,4 +1,5 @@
 # from matplotlib import pyplot as plt
+from itertools import chain
 from torchvision.utils import save_image
 
 def plotW(score, name):
@@ -71,36 +72,34 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group["lr"]
 
-# class AvgMeter:
-#     def __init__(self, name="Metric"):
-#         self.name = name
-#         self.reset()
 
-#     def reset(self):
-#         self.avg, self.sum, self.count = [0] * 3
+def flatten_dict(init_dict):
+    res_dict = {}
+    if type(init_dict) is not dict:
+        return res_dict
 
-#     def update(self, val, count=1):
-#         self.count += count
-#         self.sum += val * count
-#         self.avg = self.sum / self.count
-
-#     def __repr__(self):
-#         text = f"{self.name}: {self.avg:.4f}"
-#         return text
+    for k, v in init_dict.items():
+        if type(v) == dict:
+            res_dict.update(flatten_dict(v))
+        else:
+            res_dict[k] = v
+    return res_dict
 
 
+def setattr_cls_from_kwargs(cls, kwargs):
+    kwargs = flatten_dict(kwargs)
+    for key in kwargs.keys():
+        value = kwargs[key]
+        setattr(cls, key, value)
 
-# def accuracy(output, target, topk=(1,)):
-#     """Computes the precision@k for the specified values of k"""
-#     maxk = max(topk)
-#     batch_size = target.size(0)
 
-#     _, pred = output.topk(maxk, 1, True, True)
-#     pred = pred.t()
-#     correct = pred.eq(target.view(1, -1).expand_as(pred))
+def dict2clsattr(train_configs, model_configs):
+    cfgs = {}
+    for k, v in chain(train_configs.items(), model_configs.items()):
+        cfgs[k] = v
 
-#     res = []
-#     for k in topk:
-#         correct_k = correct[:k].flatten().float().sum(0)
-#         res.append(correct_k.mul_(100.0 / batch_size))
-#     return res
+    class cfg_container: pass
+    cfg_container.train_configs = train_configs
+    cfg_container.model_configs = model_configs
+    setattr_cls_from_kwargs(cfg_container, cfgs)
+    return cfg_container

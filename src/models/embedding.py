@@ -22,6 +22,7 @@ class ClipEmbedding():
         if self.emb_type == configs.FINGERPRINT:
             suffix = f'_{self.opts.image_data}_{self.str_filter}'
         self.emb_path = os.path.join(self.opts.emb_dir, f'{self.emb_type}{suffix}_{self.opts.word_data}_{self.lang}_{self.data_mode}.npy')
+        self.model = None
     
     def load_clip_model(self):
         model_name = configs.model_names[self.lang]
@@ -56,9 +57,11 @@ class ClipEmbedding():
             img_embs = np.load(img_emb_pth, allow_pickle=True)
             img_embs = torch.Tensor(img_embs).to(self.opts.device)
         else:
+            if self.model is None:
+                self.load_clip_model()
             print('.....', '.....', "New image embedding") 
             ########### New Embeddings ############
-            img_pth = os.path.join(self.opts.img_dir, f'img_{self.opts.image_data}_k{self.opts.num_images}_{self.str_filter}.npy')
+            img_pth = os.path.join(self.opts.img_dir, f'img_{self.opts.image_data}_{self.lang}_k{self.opts.num_images}_{self.str_filter}.npy')
             if self.opts.reuse_image_data and os.path.isfile(img_pth): 
                 print('.....', '.....', '.....', "Reuse image data") 
                 images = np.load(img_pth, allow_pickle=True)
@@ -90,11 +93,13 @@ class ClipEmbedding():
             print('.....', '.....', "Reuse text embedding", txt_emb_pth)
             txt_embs = np.load(txt_emb_pth, allow_pickle=True)
         else:
+            if self.model is None:
+                self.load_clip_model()
             print('.....', '.....',  "New text embedding") 
             texts = generate_texts(prompts[self.lang], vocabs, k=self.opts.num_prompts)
             txt_embs = []
             K = len(prompts[self.lang]) if -1 == self.opts.num_prompts else self.opts.num_prompts
-            bs = 1024 * K
+            bs = 128  * K
             for batch_texts in tqdm(chunks(bs, texts)):
                 with torch.no_grad():
                     # encoded_query = self.tokenizer(batch_texts, padding=True, truncation=True,max_length=200)
@@ -113,11 +118,13 @@ class ClipEmbedding():
         return txt_embs
 
     def load_fingerprint(self, img_embs, txt_embs):
+        img_embs = F.normalize(img_embs, dim=1)
+        txt_embs = F.normalize(txt_embs, dim=1)
         txt_logits = txt_embs @ img_embs.t()
-        if self.opts.num_images > 1:
-            K, D = self.opts.num_images, img_embs.shape[0] // self.opts.num_images
-            txt_logits = txt_logits.view(-1, D, K)
-            txt_logits = txt_logits.mean(dim=-1)
+        # if self.opts.num_images > 1:
+        #     K, D = self.opts.num_images, img_embs.shape[0] // self.opts.num_images
+        #     txt_logits = txt_logits.view(-1, D, K)
+        #     txt_logits = txt_logits.mean(dim=-1)
         probs = self.logit_scale * txt_logits
         probs = probs.softmax(dim=-1)
         return probs.cpu().detach().numpy()

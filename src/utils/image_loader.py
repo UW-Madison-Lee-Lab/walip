@@ -1,17 +1,17 @@
 
-import os, sys
+import os
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 from PIL import Image
+import cv2
+from tqdm import tqdm
+
+from torchvision import transforms
 from torchvision.datasets import CIFAR100, CIFAR10, ImageFolder
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
 from torchvision.transforms import CenterCrop, Normalize, Resize, ToTensor
 from torchvision.transforms.functional import InterpolationMode
 from transformers import ViTFeatureExtractor
-import cv2
-import pandas as pd
 
 import configs
 
@@ -58,17 +58,20 @@ class ViTDataset(Dataset):
         return img['pixel_values'][0], self.targets[index]
 
 
+# label is in format 1 3 10 with 11 classes converts to -> [0,1,0,1,0,0,0,0,0,0,1]
+def one_hot(label, n_classes):
+    l = np.zeros(n_classes)
+    indices = [int(x) for x in label.split(" ")]
+    l[indices] = 1
+    return l
+
+def get_first_label(label):
+    indices = [int(x) for x in label.split(" ")]
+    return indices[0]
+
+
 def load_image_dataset(image_name, data_dir='../dataset', preprocess=None, multilabel=False):
     print('.....', '.....', '.....', "Load image dataset ", image_name)
-
-    if image_name in configs.means and image_name in configs.stds:
-        preprocess = transforms.Compose([
-            Resize([224], interpolation=InterpolationMode.BICUBIC),
-            CenterCrop(224),
-            ToTensor(),
-            Normalize(configs.means[image_name], configs.stds[image_name]),
-        ])
-
     if image_name.startswith('cifar'):
         if image_name == 'cifar100':
             image_dataset = CIFAR100(data_dir, transform=preprocess, download=True, train=False)
@@ -85,41 +88,14 @@ def load_image_dataset(image_name, data_dir='../dataset', preprocess=None, multi
                 ToTensor(),
                 Normalize(configs.means[image_name], configs.stds[image_name]),
             ])
-        # import h5py as h5
-        # hdf5_path = data_dir + f'{image_name}/{image_name}_valid.h5'
-        # if os.path.isfile(hdf5_path):
-        #     print('Loading %s into memory...' % hdf5_path)
-        #     with h5.File(hdf5_path, 'r') as f:
-        #         imgs = np.asarray(f.get('imgs'))
-        #         labels = np.asarray(f.get('labels'))
-        #     image_dataset = ImageDataset(imgs, labels, preprocess)
-        # else:
         image_dataset = ImageFolder(os.path.join(data_dir, 'imagenet/val/'), preprocess)
-            # imgs = []
-            # for i in tqdm(chunks(1, range(len(image_data)))):
-            #     imgs.append(image_data[i][0])
-            # labels = [image_data[i][1] for i in range(len(image_data))]
-            # from IPython import embed; embed()
-            # hf = h5.File(hdf5_path, 'w')
-            # hf.create_dataset('imgs', data=np.stack(imgs, axis=0))
-            # hf.create_dataset('labels', data=np.asarray(labels))
-            # hf.close()
-    elif image_name == "coco":
 
+    elif image_name == "coco":
         images, labels = load_image_data(image_name, 10000, False, "./", multilabel = multilabel)
         image_dataset = ViTDataset(ImageDataset(images, labels, multilabel=True), convert_image=True)
+
     return image_dataset
 
-# label is in format 1 3 10 with 11 classes converts to -> [0,1,0,1,0,0,0,0,0,0,1]
-def one_hot(label, n_classes):
-    l = np.zeros(n_classes)
-    indices = [int(x) for x in label.split(" ")]
-    l[indices] = 1
-    return l
-
-def get_first_label(label):
-    indices = [int(x) for x in label.split(" ")]
-    return indices[0]
 
 
 def load_image_data(image_name, num_images, using_filtered_images, img_dir, preprocess=None, multilabel=False):
@@ -129,32 +105,11 @@ def load_image_data(image_name, num_images, using_filtered_images, img_dir, prep
         image_dataset = load_image_dataset(image_name, preprocess=preprocess)
     print('Load', num_images, 'images from dataset')
     if using_filtered_images:
-        fpath = os.path.join(img_dir, f'{image_name}_en_correct_index.npy')
-        if os.path.isfile(fpath):
-            dct = np.load(fpath, allow_pickle=True).item()
-            indices = list(dct.values())
-            # images = [image_dataset[idx][0].numpy() for idx in indices]
-            images = []
-            for v in indices:
-                idx = v[0]
-                images.append(image_dataset[idx][0].numpy())
-            print('Total: ', len(images))
-        else:
-            with open(img_dir + image_name + '_index.txt') as f:
-                lines = f.readlines()
-            d = {}
-            for l in lines:
-                k, v = l.strip().split(' ')
-                k, v = int(k), int(v)
-                if k in d:
-                    d[k].append(v)
-                else:
-                    d[k] = [v]
-            images = []
-            for c in range(num_classes):
-                for i in range(num_images):
-                    idx = d[c][i]
-                    images.append(image_dataset[idx][0])
+        fpath = os.path.join(img_dir, f'{image_name}_en_sw_index.npy')
+        assert os.path.isfile(fpath)
+        dct = np.load(fpath, allow_pickle=True).item()
+        indices = list(dct.values())
+        images = [image_dataset[idx][0].numpy() for idx in indices]
     else:
         images = []
         # pick one image per class
@@ -167,22 +122,16 @@ def load_image_data(image_name, num_images, using_filtered_images, img_dir, prep
             if os.path.isfile(label_path):
                 labels = np.load(label_path, allow_pickle=True)
             else:
-                dataloader = DataLoader(image_dataset, batch_size=32, shuffle=False, drop_last=False, num_workers=4)
+                dataloader = DataLoader(image_dataset, batch_size=32, shuffle=False, drop_last=True, num_workers=4)
                 labels = []
                 for batch in tqdm(dataloader):
                     labels.append(batch[1].numpy())
                 labels = np.stack(labels, axis=0)
                 np.save(label_path, np.asarray(labels))
-            # feature_extractor = ViTFeatureExtractor.from_pretrained('google/vit-base-patch16-224-in21k')
             for c in range(num_classes):
                 indices = np.argwhere(labels == c)
-                img = image_dataset[indices[0][0]][0]#.numpy()
-                # inputs = feature_extractor(img, return_tensors="pt") 
-                # images += [ for i in range(num_images)]
-                # images.append(inputs['pixel_values'][0])
-                images.append(img)
+                images += [image_dataset[indices[i][0]][0] for i in range(num_images)]
         elif image_name == 'coco':
-
             # Expected to have image_id, and labels columns
             captions_path = f"../dataset/coco/captions/en/{configs.caption_names['en']}"
             df = pd.read_csv(f"{captions_path}")
@@ -192,7 +141,6 @@ def load_image_data(image_name, num_images, using_filtered_images, img_dir, prep
             else:
                 labels = df["labels"].apply(get_first_label).values
             
-
             indices = np.arange(len(image_ids))
             np.random.seed(42)
             np.random.shuffle(indices)
@@ -202,10 +150,37 @@ def load_image_data(image_name, num_images, using_filtered_images, img_dir, prep
             image_path = f"../dataset/coco/images/{configs.image_folders['en']}"
             image_filenames = [f"{image_path}/{configs.image_prefixes['en']}{str(image_ids[i]).zfill(12)}.jpg" for i in range(len(image_ids))] 
             images = image_filenames
-
-            
- 
             return images[:num_images], final_labels[:num_images]
+        # final images    
         images = np.stack(images, axis=0)
         
     return images
+
+
+
+
+
+#########==== comments ====#####
+'''
+    # images = []
+    # for v in indices:
+    #     idx = v[0]
+    #     images.append(image_dataset[idx][0].numpy())
+    # print('Total: ', len(images))
+else:
+    with open(img_dir + image_name + '_en_sw_index.txt') as f:
+        lines = f.readlines()
+    d = {}
+    for l in lines:
+        k, v = l.strip().split(' ')
+        k, v = int(k), int(v)
+        if k in d:
+            d[k].append(v)
+        else:
+            d[k] = [v]
+    images = []
+    for c in range(num_classes):
+        for i in range(num_images):
+            idx = d[c][i]
+            images.append(image_dataset[idx][0].numpy())
+'''

@@ -18,7 +18,7 @@ class ClipObject():
             text_features = self.text_model(txt)
             text_features = torch.from_numpy(text_features).to(self.device)
         else:
-            text_features = self.text_model(txt)
+            text_features = self.text_model(txt).to(self.device)
         return F.normalize(text_features, dim=-1)
 
     def encode_image(self, imgs):
@@ -26,7 +26,7 @@ class ClipObject():
             image_features = self.image_model(imgs.cpu())
             image_features = torch.from_numpy(image_features).to(self.device)
         else:
-            image_features = self.image_model.encode_image(imgs).type(torch.cuda.FloatTensor)
+            image_features = self.image_model.encode_image(imgs).type(torch.FloatTensor).to(self.device)
         return F.normalize(image_features, dim=-1)
 
 class EnglishClipObject():
@@ -37,11 +37,11 @@ class EnglishClipObject():
         self.device = device
     
     def encode_image(self, imgs):
-        return self.clip_model.encode_image(imgs).type(torch.cuda.FloatTensor)
+        return self.clip_model.encode_image(imgs).type(torch.FloatTensor).to(self.device)
 
     def encode_text(self, txts):
         text_tokens = clip.tokenize(txts).to(self.device)
-        text_embeddings = self.clip_model.encode_text(text_tokens).type(torch.cuda.FloatTensor)
+        text_embeddings = self.clip_model.encode_text(text_tokens).type(torch.FloatTensor).to(self.device)
         text_embeddings = F.normalize(text_embeddings, dim=-1)
         return text_embeddings
 
