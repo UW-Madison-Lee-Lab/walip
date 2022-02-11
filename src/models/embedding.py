@@ -96,9 +96,9 @@ class ClipEmbedding():
             if self.model is None:
                 self.load_clip_model()
             print('.....', '.....',  "New text embedding") 
-            texts = generate_texts(prompts[self.lang], vocabs, k=self.opts.num_prompts)
+            texts = generate_texts(prompts[self.opts.image_data][self.lang], vocabs, k=self.opts.num_prompts)
             txt_embs = []
-            K = len(prompts[self.lang]) if -1 == self.opts.num_prompts else self.opts.num_prompts
+            K = len(prompts[self.opts.image_data][self.lang]) if -1 == self.opts.num_prompts else self.opts.num_prompts
             bs = 128  * K
             for batch_texts in tqdm(chunks(bs, texts)):
                 with torch.no_grad():

@@ -16,7 +16,7 @@ import numpy as np
 
 def load_image_and_class(model, preprocess, image_data, lang, opts, multilabel = False):
     vocab = load_vocabs(opts, lang)
-    texts = generate_texts(prompts[lang], vocab, k=opts.num_prompts)
+    texts = generate_texts(prompts[image_data][lang], vocab, k=opts.num_prompts)
 
     K = opts.num_prompts
     text_embeddings = []
