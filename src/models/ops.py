@@ -19,7 +19,7 @@ class ClipObject():
             text_features = torch.from_numpy(text_features).to(self.device)
         else:
             text_features = self.text_model(txt).to(self.device)
-        return F.normalize(text_features, dim=-1)
+        return text_features
 
     def encode_image(self, imgs):
         if self.italian:
@@ -27,7 +27,7 @@ class ClipObject():
             image_features = torch.from_numpy(image_features).to(self.device)
         else:
             image_features = self.image_model.encode_image(imgs).type(torch.FloatTensor).to(self.device)
-        return F.normalize(image_features, dim=-1)
+        return image_features
 
 class EnglishClipObject():
     def __init__(self, name="ViT-B/32", device="cuda") -> None:
@@ -42,7 +42,6 @@ class EnglishClipObject():
     def encode_text(self, txts):
         text_tokens = clip.tokenize(txts).to(self.device)
         text_embeddings = self.clip_model.encode_text(text_tokens).type(torch.FloatTensor).to(self.device)
-        text_embeddings = F.normalize(text_embeddings, dim=-1)
         return text_embeddings
 
 

@@ -1,6 +1,8 @@
 import torch, sys
 from torch.utils.data import DataLoader
+from torch.utils.data import Subset
 import torch.nn.functional as F
+from funcy import chunks
 from sklearn import metrics
 from utils.text_loader import load_vocabs
 from utils.image_loader import load_image_dataset
@@ -16,11 +18,19 @@ def load_image_and_class(model, preprocess, image_data, lang, opts, multilabel =
     vocab = load_vocabs(opts, lang)
     texts = generate_texts(prompts[lang], vocab, k=opts.num_prompts)
 
-    with torch.no_grad():
-        text_embeddings = model.encode_text(texts)
-        text_embeddings = text_embeddings.view(-1, opts.num_prompts, text_embeddings.shape[-1])
-        text_embeddings = text_embeddings.mean(dim=1)
-
+    K = opts.num_prompts
+    text_embeddings = []
+    for batch_texts in tqdm(chunks(128*K, texts)):
+        with torch.no_grad():
+            batch_txt_embs = model.encode_text(batch_texts)
+            # ensemble
+            batch_size = len(batch_texts) // K
+            batch_txt_embs = batch_txt_embs.view(batch_size, K, batch_txt_embs.shape[-1])
+            batch_txt_embs = batch_txt_embs.mean(dim=1)
+            # normalize after averaging
+            batch_txt_embs = F.normalize(batch_txt_embs, dim=-1)
+            text_embeddings.append(batch_txt_embs)
+    text_embeddings = torch.cat(text_embeddings, dim=0)
     image_dataset = load_image_dataset(image_data, preprocess=preprocess, multilabel = multilabel)
     dataloader = DataLoader(image_dataset, batch_size=opts.batch_size, shuffle=False, drop_last=True, num_workers=4)
 
@@ -34,10 +44,25 @@ def evaluate_classification(image_data, lang, opts, model=None):
     else:
         preprocess = None
     text_embeddings, dataloader = load_image_and_class(model, preprocess, image_data, lang, opts)
-    validate(model, text_embeddings, dataloader, opts.device)
-
-def validate(model, text_embeddings, dataloader, device):
-    text_embeddings = text_embeddings.type(torch.cuda.FloatTensor)
+    image_dataset = load_image_dataset(image_data, preprocess=preprocess)
+    s = 0
+    scores = []
+    num_classes = configs.num_classes[image_data]
+    for c in range(num_classes):
+        indices = np.argwhere(np.asarray(image_dataset.targets) == c)
+        indices = indices.reshape(len(indices))
+        data = Subset(image_dataset, indices.tolist())
+        dataloader = DataLoader(data, batch_size=opts.batch_size, shuffle=False, drop_last=True, num_workers=4)
+        print("Class ", c)
+        top1, top5 = validate(model, text_embeddings, dataloader, opts.device, logit_scale)
+        s += top1
+        scores.append(top1)
+    print('ACC: ', s/num_classes)
+    for i in range(num_classes):
+        print(scores[i])
+    
+def validate(model, text_embeddings, dataloader, device, logit_scale=1.0):
+    text_embeddings = text_embeddings.type(torch.FloatTensor).to(device)
     tqdm_object = tqdm(dataloader, total=len(dataloader))
     top5, top1 = AverageMeter(), AverageMeter()
     for (images, labels) in tqdm_object:
@@ -45,8 +70,9 @@ def validate(model, text_embeddings, dataloader, device):
         labels = labels.long().to(device)
         with torch.no_grad():
             image_embeddings = model.encode_image(images.to(device))
-            image_embeddings = image_embeddings.type(torch.cuda.FloatTensor)
-        logits = image_embeddings @ text_embeddings.T
+            image_embeddings = image_embeddings.type(torch.FloatTensor).to(device)
+            image_embeddings = F.normalize(image_embeddings, dim=-1)
+        logits = image_embeddings @ text_embeddings.T * logit_scale
         _, pred = logits.topk(1, 1, True, True)
         pred = pred.t()
         precs = accuracy(logits, labels, topk=(1, 5))
@@ -58,6 +84,7 @@ def validate(model, text_embeddings, dataloader, device):
         torch.cuda.empty_cache()
 
     print("Classification on", top1.avg, top5.avg)
+    return top1.avg, top5.avg
 
 
 
@@ -106,7 +133,17 @@ def evaluate_multilabel_classification(image_data, lang, opts):
     with open("../results/AUC.txt", "w") as f:
         for idx in indices:
             f.write("{}: {}\n".format(idx, FinalMAPs[idx]))
-
-
     
     return FinalMAPs
+
+
+
+
+# def evaluate_classification(image_data, lang, opts, model=None):
+#     if model is None:
+#         model_name = configs.model_names[lang]
+#         model, logit_scale, preprocess = load_models(lang, model_name, 'coco', opts.device, opts.large_model) 
+#     else:
+#         preprocess = None
+#     text_embeddings, dataloader = load_image_and_class(model, preprocess, image_data, lang, opts)
+#     validate(model, text_embeddings, dataloader, opts.device)

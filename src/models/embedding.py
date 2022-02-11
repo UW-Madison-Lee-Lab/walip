@@ -27,6 +27,9 @@ class ClipEmbedding():
     def load_clip_model(self):
         model_name = configs.model_names[self.lang]
         self.model, self.logit_scale, self.preprocess = load_models(self.lang, model_name, 'coco', device=self.opts.device, large_model=self.opts.large_model)
+    
+    def set_logit_scale(self, value):
+        self.logit_scale = value
 
     def load_embedding(self, vocabs=None):
         if self.opts.reuse_embedding:
@@ -76,11 +79,8 @@ class ClipEmbedding():
             list_img_embs = []
             with torch.no_grad():
                 for batch_ids in tqdm(chunks(32, range(images.shape[0]))):
-                    # batch_imgs = images[batch_ids, ...]
-                    # img_embs = self.model.image_encoder(batch_imgs.to(self.opts.device)).float()
-                    # img_embs = self.model.image_projection(img_embs)
-                    # img_embs = F.normalize(img_embs, dim=-1)
                     img_embs = self.model.encode_image(images[batch_ids, ...].to(self.opts.device))
+                    img_embs = F.normalize(img_embs, dim=-1)
                     list_img_embs.append(img_embs)    
             img_embs = torch.cat(list_img_embs, dim=0)
             # save embs
@@ -102,31 +102,28 @@ class ClipEmbedding():
             bs = 128  * K
             for batch_texts in tqdm(chunks(bs, texts)):
                 with torch.no_grad():
-                    # encoded_query = self.tokenizer(batch_texts, padding=True, truncation=True,max_length=200)
-                    # batch = {key: torch.tensor(values).to(self.opts.device) for key, values in encoded_query.items()}
-                    # batch_txt_embs = self.model.text_encoder(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"])
-                    # batch_txt_embs = self.model.text_projection(batch_txt_embs).float()
-                    # batch_txt_embs = F.normalize(batch_txt_embs, dim=-1)
                     batch_txt_embs = self.model.encode_text(batch_texts)
                     # ensemble
                     batch_size = len(batch_texts) // K
                     batch_txt_embs = batch_txt_embs.view(batch_size, K, batch_txt_embs.shape[-1])
                     batch_txt_embs = batch_txt_embs.mean(dim=1)
+                    # normalize after averaging
+                    batch_txt_embs = F.normalize(batch_txt_embs, dim=-1)
                 txt_embs.append(batch_txt_embs.cpu().numpy())
             txt_embs = np.concatenate(txt_embs, axis=0)
             np.save(txt_emb_pth, txt_embs) 
         return txt_embs
 
     def load_fingerprint(self, img_embs, txt_embs):
-        img_embs = F.normalize(img_embs, dim=1)
-        txt_embs = F.normalize(txt_embs, dim=1)
+        # img_embs = F.normalize(img_embs, dim=1)
+        # txt_embs = F.normalize(txt_embs, dim=1)
         txt_logits = txt_embs @ img_embs.t()
         # if self.opts.num_images > 1:
         #     K, D = self.opts.num_images, img_embs.shape[0] // self.opts.num_images
         #     txt_logits = txt_logits.view(-1, D, K)
         #     txt_logits = txt_logits.mean(dim=-1)
         probs = self.logit_scale * txt_logits
-        probs = probs.softmax(dim=-1)
+        # probs = probs.softmax(dim=-1)
         return probs.cpu().detach().numpy()
 
 
