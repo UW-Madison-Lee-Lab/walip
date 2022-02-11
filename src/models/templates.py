@@ -83,6 +83,110 @@ prompts = {
             "arte del {}.",
             "una foto del piccolo {}."
         ]
+    },
+    'cifar100': {
+        'en': [
+            'a photo of a {}.',
+            'a blurry photo of a {}.',
+            'a black and white photo of a {}.',
+            'a low contrast photo of a {}.',
+            'a high contrast photo of a {}.',
+            'a bad photo of a {}.',
+            'a good photo of a {}.',
+            'a photo of a small {}.',
+            'a photo of a big {}.',
+            'a photo of the {}.',
+            'a blurry photo of the {}.',
+            'a black and white photo of the {}.',
+            'a low contrast photo of the {}.',
+            'a high contrast photo of the {}.',
+            'a bad photo of the {}.',
+            'a good photo of the {}.',
+            'a photo of the small {}.',
+            'a photo of the big {}.',
+        ],
+        'it': [
+            "una foto di un {}.",
+            "una foto di {}",
+            "l'immagine di {}",
+            "una foto sfocata di un {}.",
+            "una foto in bianco e nero di {}.",
+            "una foto a basso contrasto di un {}.",
+            "una foto ad alto contrasto di un {}.",
+            "una brutta foto di un {}.",
+            "una buona foto di un {}.",
+            "una foto di un piccolo {}.",
+            "una foto di un grande {}.",
+            "una foto del {}.",
+            "una foto sfocata di {}.",
+            "una foto in bianco e nero del {}.",
+            "una foto a basso contrasto di {}.",
+            "una foto ad alto contrasto di {}.",
+            "una brutta foto del {}.",
+            "una buona foto del {}.",
+            "una foto del piccolo {}.",
+            "una foto del grande {}.",
+        ],
+        'sw' : [
+            "Detta är ett foto av en {}.",
+            "Detta är ett suddigt foto av en {}.",
+            "Detta är ett svartvitt foto av en {}.",
+            "ett lågkontrastfoto av en {}.",
+            "ett högkontrastfoto av en {}.",
+            "ett dåligt foto av en {}.",
+            "ett bra foto av en {}.",
+            "ett foto på en liten {}.",
+            "ett foto av en stor {}.",
+            "ett foto av {}.",
+            "ett suddigt foto av {}.",
+            "ett svartvitt foto av {}.",
+            "ett lågkontrastfoto av {}.",
+            "ett högkontrastfoto av {}.",
+            "ett dåligt foto av {}.",
+            "ett bra foto av {}.",
+            "ett foto på den lilla {}.",
+            "ett foto på den stora {}.",
+        ]
+    },
+    'imagenet': {
+        'en': [
+            "itap of a {}.",
+            "a bad photo of the {}.",
+            "a origami {}.",
+            "a photo of the large {}.",
+            "a {} in a video game.",
+            "art of the {}.",
+            "a photo of the small {}."
+        ],
+        'it': [
+            "itap di un {}.",
+            "una brutta foto del {}.",
+            "un origami {}.",
+            "una foto del grande {}.",
+            "a {} in un videogioco.",
+            "arte del {}.",
+            "una foto del piccolo {}."
+        ]
+    },
+    'imagenet_r': {
+        'en': [
+            "itap of a {}.",
+            "a bad photo of the {}.",
+            "a origami {}.",
+            "a photo of the large {}.",
+            "a {} in a video game.",
+            "art of the {}.",
+            "a photo of the small {}."
+        ],
+        'it': [
+            "itap di un {}.",
+            "una brutta foto del {}.",
+            "un origami {}.",
+            "una foto del grande {}.",
+            "a {} in un videogioco.",
+            "arte del {}.",
+            "una foto del piccolo {}."
+        ]
     }
 }
 
