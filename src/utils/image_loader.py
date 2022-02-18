@@ -80,7 +80,7 @@ def load_image_dataset(image_name, data_dir='../dataset', preprocess=None, multi
         if preprocess is None:
             image_dataset = ViTDataset(image_dataset)
 
-    elif image_name in ['tiny', 'imagenet']:
+    elif image_name.startswith("imagenet"):
         if preprocess is None:
             preprocess = transforms.Compose([
                 Resize([224], interpolation=InterpolationMode.BICUBIC),
@@ -88,7 +88,7 @@ def load_image_dataset(image_name, data_dir='../dataset', preprocess=None, multi
                 ToTensor(),
                 Normalize(configs.means[image_name], configs.stds[image_name]),
             ])
-        image_dataset = ImageFolder(os.path.join(data_dir, 'imagenet/val/'), preprocess)
+        image_dataset = ImageFolder(os.path.join(data_dir, f'{image_name}/val/'), preprocess)
 
     elif image_name == "coco":
         images, labels = load_image_data(image_name, 10000, False, "./", multilabel = multilabel)
@@ -122,12 +122,13 @@ def load_image_data(image_name, num_images, using_filtered_images, img_dir, prep
             if os.path.isfile(label_path):
                 labels = np.load(label_path, allow_pickle=True)
             else:
-                dataloader = DataLoader(image_dataset, batch_size=32, shuffle=False, drop_last=True, num_workers=4)
+                dataloader = DataLoader(image_dataset, batch_size=128, shuffle=False, drop_last=True, num_workers=4)
                 labels = []
                 for batch in tqdm(dataloader):
                     labels.append(batch[1].numpy())
                 labels = np.stack(labels, axis=0)
                 np.save(label_path, np.asarray(labels))
+            labels = labels.flatten()
             for c in range(num_classes):
                 indices = np.argwhere(labels == c)
                 images += [image_dataset[indices[i][0]][0] for i in range(num_images)]

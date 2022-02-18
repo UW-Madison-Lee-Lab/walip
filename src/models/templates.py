@@ -21,6 +21,26 @@ prompts = {
             'a photo of the small {}.',
             'a photo of the big {}.',
         ],
+        'en2': [
+            'a photo of a {}.',
+            'a blurry photo of a {}.',
+            'a black and white photo of a {}.',
+            'a low contrast photo of a {}.',
+            'a high contrast photo of a {}.',
+            'a bad photo of a {}.',
+            'a good photo of a {}.',
+            'a photo of a small {}.',
+            'a photo of a big {}.',
+            'a photo of the {}.',
+            'a blurry photo of the {}.',
+            'a black and white photo of the {}.',
+            'a low contrast photo of the {}.',
+            'a high contrast photo of the {}.',
+            'a bad photo of the {}.',
+            'a good photo of the {}.',
+            'a photo of the small {}.',
+            'a photo of the big {}.',
+        ],
         'it': [
             "una foto di un {}.",
             "una foto di {}",
@@ -64,28 +84,28 @@ prompts = {
             "ett foto på den stora {}.",
         ]
     },
-    'imagenet': {
-        'en': [
-            "itap of a {}.",
-            "a bad photo of the {}.",
-            "a origami {}.",
-            "a photo of the large {}.",
-            "a {} in a video game.",
-            "art of the {}.",
-            "a photo of the small {}."
-        ],
-        'it': [
-            "itap di un {}.",
-            "una brutta foto del {}.",
-            "un origami {}.",
-            "una foto del grande {}.",
-            "a {} in un videogioco.",
-            "arte del {}.",
-            "una foto del piccolo {}."
-        ]
-    },
     'cifar100': {
         'en': [
+            'a photo of a {}.',
+            'a blurry photo of a {}.',
+            'a black and white photo of a {}.',
+            'a low contrast photo of a {}.',
+            'a high contrast photo of a {}.',
+            'a bad photo of a {}.',
+            'a good photo of a {}.',
+            'a photo of a small {}.',
+            'a photo of a big {}.',
+            'a photo of the {}.',
+            'a blurry photo of the {}.',
+            'a black and white photo of the {}.',
+            'a low contrast photo of the {}.',
+            'a high contrast photo of the {}.',
+            'a bad photo of the {}.',
+            'a good photo of the {}.',
+            'a photo of the small {}.',
+            'a photo of the big {}.',
+        ],
+        'en2': [
             'a photo of a {}.',
             'a blurry photo of a {}.',
             'a black and white photo of a {}.',
@@ -158,6 +178,15 @@ prompts = {
             "art of the {}.",
             "a photo of the small {}."
         ],
+        'en2': [
+            "itap of a {}.",
+            "a bad photo of the {}.",
+            "a origami {}.",
+            "a photo of the large {}.",
+            "a {} in a video game.",
+            "art of the {}.",
+            "a photo of the small {}."
+        ],
         'it': [
             "itap di un {}.",
             "una brutta foto del {}.",
@@ -166,6 +195,15 @@ prompts = {
             "a {} in un videogioco.",
             "arte del {}.",
             "una foto del piccolo {}."
+        ],
+        'sw': [
+            "tap på en {}.",
+            "ett dåligt foto av {}.",
+            "en origami {}.",
+            "ett foto av den stora {}.",
+            "en {} i ett videospel.",
+            "konst av {}.",
+            "ett foto på den lilla {}."
         ]
     },
     'imagenet_r': {

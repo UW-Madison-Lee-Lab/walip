@@ -4,30 +4,30 @@
     "tgt_lang": "it"
  },
   "words":{ 
-    "word_data" : "imagenet",
-    "data_mode" : "extended",
-    "num_prompts": 3
+    "word_data" : "cifar10",
+    "data_mode" : "test"
   },
   "images": {
-    "image_data": "imagenet",
-    "num_images": 1,
+    "image_data": "cifar10",
+    "num_images": 2,
+    "num_prompts": 10,
     "using_filtered_images": false
   },
 
   "embedding": {
     "emb_type": "fp",
     "large_model": true,
-    "reuse_embedding": false,
+    "reuse_embedding": true,
     "reuse_text_embedding": false,
     "reuse_image_embedding": false,
     "reuse_image_data": true
   },
 
   "train": {
-    "work_mode": "translation",
+    "work_mode": "analysis",
     "supervised": false,
-    "sim_score": "cosine",
-    "matching_method": "quad_ot"
+    "sim_score": "csls",
+    "matching_method": "nn"
   },
 
   "dico": {

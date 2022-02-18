@@ -12,10 +12,7 @@ import configs
 
 class ClipEmbedding():
     def __init__(self, emb_type, lang, data_mode, opts):
-        self.emb_type = emb_type
-        self.lang = lang
-        self.data_mode = data_mode
-        self.opts = opts
+        self.emb_type, self.lang, self.data_mode, self.opts = emb_type, lang, data_mode, opts
         self.str_filter = 's' if self.opts.using_filtered_images else 'u'
         suffix = ''
         print(self.lang, emb_type, 'embedding!!!')
@@ -43,7 +40,6 @@ class ClipEmbedding():
         if self.emb_type == configs.FASTTEXT:
             embs = np.load(self.emb_path, allow_pickle=True)
         else:
-            self.load_clip_model()
             txt_embs = self.load_clip_txt_emb(vocabs)
             if self.emb_type == configs.FINGERPRINT:
                 img_embs = self.load_clip_img_emb()
@@ -74,7 +70,7 @@ class ClipEmbedding():
                 np.save(img_pth, images)
             images = torch.Tensor(images)
             # save image 
-            save_images(images, f'../results/base_images_{self.str_filter}.png', nrows=int(images.shape[0]**0.5))
+            # save_images(images, f'../results/base_images_{self.str_filter}.png', nrows=int(images.shape[0]**0.5))
             ### Model embeddings
             list_img_embs = []
             with torch.no_grad():
@@ -88,7 +84,7 @@ class ClipEmbedding():
         return img_embs
 
     def load_clip_txt_emb(self, vocabs=None):
-        txt_emb_pth = os.path.join(self.opts.emb_dir + f'txt_emb_{self.opts.word_data}_{self.lang}_{self.data_mode}.npy')
+        txt_emb_pth = os.path.join(self.opts.emb_dir, f'txt_emb_{self.opts.word_data}_{self.lang}_{self.data_mode}.npy')
         if self.opts.reuse_text_embedding and os.path.isfile(txt_emb_pth):
             print('.....', '.....', "Reuse text embedding", txt_emb_pth)
             txt_embs = np.load(txt_emb_pth, allow_pickle=True)
@@ -115,16 +111,9 @@ class ClipEmbedding():
         return txt_embs
 
     def load_fingerprint(self, img_embs, txt_embs):
-        # img_embs = F.normalize(img_embs, dim=1)
-        # txt_embs = F.normalize(txt_embs, dim=1)
         txt_logits = txt_embs @ img_embs.t()
-        # if self.opts.num_images > 1:
-        #     K, D = self.opts.num_images, img_embs.shape[0] // self.opts.num_images
-        #     txt_logits = txt_logits.view(-1, D, K)
-        #     txt_logits = txt_logits.mean(dim=-1)
-        probs = self.logit_scale * txt_logits
         # probs = probs.softmax(dim=-1)
-        return probs.cpu().detach().numpy()
+        return txt_logits.cpu().detach().numpy()
 
 
 

@@ -3,14 +3,110 @@ import numpy as np
 import torch, os, scipy
 import scipy.optimize
 from scipy import stats
+import torch.nn.functional as F
 from evals.word_translation import get_csls_word_translation, build_dictionary, get_topk_translation_accuracy, load_dictionary
 from utils.helper import get_accuracy
 from utils.text_loader import combine_files
-from pkg.gmp import quadratic_assignment_ot
+from quad_ot.gmp import quadratic_assignment_ot
 import configs
 
 
 
+def cal_similarity(sim_score, dico, embs):
+    for l in ['src', 'tgt']:
+        embs[l] = F.normalize(embs[l], dim=1)
+
+    if sim_score in ['csls', 'cosine']:
+        scores = get_csls_word_translation(dico, embs['src'], embs['tgt'], sim_score)
+    elif sim_score == 'inner_prod':
+        test_emb0 = embs['src'][dico[:, 0]]
+        test_emb1 = embs['tgt'][dico[:, 1]]
+        scores = test_emb0 @ test_emb1.T 
+    elif sim_score == 'ranking':
+        rank_embs = {}
+        for l in ['src', 'tgt']:
+            ranks = torch.topk(embs[l], 10, dim=1)[1].cpu().numpy()
+            rank_embs[l] = np.zeros(embs[l].shape)
+            for r in range(ranks.shape[0]):
+                for k in range(10):
+                    rank_embs[l][r, ranks[r, k]] = 10 - k
+        scores = rank_embs['src'] @ rank_embs['tgt'].T
+        scores = torch.from_numpy(scores).to(embs.device)
+
+    return scores
+
+
+def align_words(matching_method, dico, scores):
+    if matching_method == 'nn':
+        results = get_topk_translation_accuracy(dico, scores)
+        print(results)
+        s = scores.max(dim=1) # value and argmax, 
+        def get_precision(s, threshold):
+            correct, total, lst = 0, 0, []
+            for i in range(len(scores)):
+                if s[0][i] > threshold:
+                    total +=1
+                    lst.append([i, s[1][i].cpu().numpy()])
+                    if s[1][i] == i:
+                        correct += 1
+            print("Precision@1 ", correct, total, correct/total)
+            return lst
+        
+        threshold = torch.quantile(s[0], 0.5)
+        print('Threshold', threshold)
+        lst = get_precision(s, threshold)
+        # np.save('../results/lst', np.asarray(lst))
+        return np.asarray(lst)
+        
+    if matching_method == 'hungarian':
+        cost = -scores.cpu().numpy()
+        dico = dico.cpu()    
+        _, col_ind = scipy.optimize.linear_sum_assignment(cost)
+        acc, wrong_pairs = get_accuracy(dico, col_ind)
+
+
+def load_test_dict(params, word2ids):
+    test_fpath = params.txt_dir + f'{params.word_data}_{params.src_lang}_{params.tgt_lang}_{params.data_mode}.txt'
+    if not os.path.isfile(test_fpath):
+        combine_files(params)
+    test_dico = load_dictionary(test_fpath, word2ids['src'], word2ids['tgt'], delimiter=configs.delimiters[params.word_data])
+    test_dico = test_dico.cuda()
+    return test_dico
+
+###============= Supervision =============##########
+def train_supervision(X1, X2):
+    # X = X1.T @ X2
+    # U, Sigma, VT = randomized_svd(X, n_components=1000, n_iter=5, random_state=42)
+    M = X2.transpose(0, 1).mm(X1).cpu().numpy()
+    U, Sigma, VT = scipy.linalg.svd(M, full_matrices=True)
+    # W = U @ VT
+    W = U.dot(VT)
+    return torch.Tensor(W).cuda()
+
+def refinement(params, W, embs):
+    # Get the best mapping according to VALIDATION_METRIC
+    # trainer.reload_best()
+
+    # training loop
+    # build a dictionary from aligned embeddings
+    src_emb = embs['src'] @ W.T
+    tgt_emb = embs['tgt']
+    src_emb = F.normalize(src_emb, dim=-1)
+    tgt_emb = F.normalize(tgt_emb, dim=-1)
+    
+    dico = build_dictionary(src_emb, tgt_emb, params)
+    X1 = embs['src'][dico[:, 0]]
+    X2 = embs['tgt'][dico[:, 1]]
+
+    # apply the Procrustes solution
+    # trainer.procrustes()
+    W = train_supervision(X1, X2)
+
+    return W
+
+
+
+###============= Quadratic Assignment =============##########
 def quad_ot(embs):
     correct_inds = np.arange(len(embs['src']))
     def compute_match_ratio(inds, correct_inds):
@@ -99,109 +195,3 @@ def quad_ot(embs):
         for s in ['src', 'tgt']:
             embs[s] = embs[s].cpu().numpy()
         get_ot(embs['src'], embs['tgt'])
-
-def calculate_similarity(params, dico, embs):
-    if params.sim_score in ['csls', 'cosine']:
-        scores = get_csls_word_translation(dico, embs['src'], embs['tgt'], params.sim_score)
-    elif params.sim_score == 'inner_prod':
-        test_emb0 = embs['src'][dico[:, 0]]
-        test_emb1 = embs['tgt'][dico[:, 1]]
-        scores = test_emb0 @ test_emb1.T 
-    elif params.sim_score == 'ranking':
-        def similarity(a, b):
-            s = 0
-            for i in range(10):
-                if a[i] in b:
-                    j = np.where(b == a[i])[0]
-                    s += (10 - i) * (10 - j)
-            return s
-        ranks = {}
-        for l in ['src', 'tgt']:
-            ranks[l] = torch.topk(embs[l], 10, dim=1)[1].cpu().numpy()
-        N = len(ranks['src'])
-        scores = np.zeros((N, N))
-        for k in range(N):
-            for m in range(N):
-                scores[k, m] = similarity(ranks['src'][k, :], ranks['tgt'][m, :])
-        col_ind = scores.argmax(axis=1)
-        # filter 
-        threshold = 200
-        count = 0
-        total = 0
-        for i in range(len(scores)):
-            if scores[i][col_ind[i]] > threshold:
-                total += 1
-                if col_ind[i] == i:
-                    count += 1
-        print(count, total, count/total*100)
-        from IPython import embed; embed()
-    return scores
-
-def match_embeddings(params, dico, embs):
-    print('\n..... Evaluating ..... ', params.word_data, params.emb_type, params.sim_score, params.matching_method)        
-
-    ###============= Similarity Calculation =============##########
-    # from IPython import embed; embed()
-    scores = calculate_similarity(params, dico, embs)
-
-    ###============= Matching Algorithm =============##########
-    if params.matching_method == 'nn':
-        results = get_topk_translation_accuracy(dico, scores)
-        print(results)
-        lstp = []
-        s = scores.max(dim=1)
-        correct, total = 0, 0
-        for i in range(len(scores)):
-            if s[0][i] > 0:
-                lstp.append(i)
-                total +=1
-                if s[1][i] == i:
-                    correct += 1
-        print("Precision@1 ", correct, total, correct/total)
-    elif params.matching_method == 'hungarian':
-        cost = -scores.cpu().numpy()
-        dico = dico.cpu()    
-        _, col_ind = scipy.optimize.linear_sum_assignment(cost)
-        acc, wrong_pairs = get_accuracy(dico, col_ind)
-    elif params.matching_method == 'quad_ot':
-        quad_ot(embs)
-        
-def evaluate_translation(params, word2ids, embs):
-    ##### Testing pairs  (subsets of dictionaries)
-    test_fpath = params.txt_dir + f'{params.word_data}_{params.src_lang}_{params.tgt_lang}_{params.data_mode}.txt'
-    if not os.path.isfile(test_fpath):
-        combine_files(params)
-    test_dico = load_dictionary(test_fpath, word2ids['src'], word2ids['tgt'], delimiter=configs.delimiters[params.word_data])
-    test_dico = test_dico.cuda()
-    match_embeddings(params, test_dico, embs)
-
-###============= Supervision =============##########
-def train_supervision(X1, X2):
-    # X = X1.T @ X2
-    # U, Sigma, VT = randomized_svd(X, n_components=1000, n_iter=5, random_state=42)
-    M = X2.transpose(0, 1).mm(X1).cpu().numpy()
-    U, Sigma, VT = scipy.linalg.svd(M, full_matrices=True)
-    # W = U @ VT
-    W = U.dot(VT)
-    return torch.Tensor(W).cuda()
-
-def refinement(params, W, embs):
-    # Get the best mapping according to VALIDATION_METRIC
-    # trainer.reload_best()
-
-    # training loop
-    # build a dictionary from aligned embeddings
-    src_emb = embs['src'] @ W.T
-    tgt_emb = embs['tgt']
-    src_emb = F.normalize(src_emb, dim=-1)
-    tgt_emb = F.normalize(tgt_emb, dim=-1)
-    
-    dico = build_dictionary(src_emb, tgt_emb, params)
-    X1 = embs['src'][dico[:, 0]]
-    X2 = embs['tgt'][dico[:, 1]]
-
-    # apply the Procrustes solution
-    # trainer.procrustes()
-    W = train_supervision(X1, X2)
-
-    return W

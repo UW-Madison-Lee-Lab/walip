@@ -60,7 +60,7 @@ def build_loaders(df, mode, params):
         dataset,
         batch_size=params.batch_size,
         num_workers=params.num_workers,
-        shuffle=True if mode == "train" else False,
+        shuffle=True,
     )
     return dataloader
 

@@ -1,11 +1,6 @@
-clip_names = {'en': "ViT-B/32",
-        # 'it': 'RN50x4'
-        'it': 'ViT-B/32'
-    }
-
-
 model_names = {
     "en": "bert-base-uncased",
+	"en2": "bert-base-uncased",
     "es": "../pretrained/uncased/",
     "it": "dbmdz/bert-base-italian-uncased",
 	'sw': 'something'
@@ -13,6 +8,7 @@ model_names = {
 
 image_folders = {
     "en": "train2014",
+	"en2": '',
     "es": "spanish_images",
     "it": "train2014",
 	"sw": ''
@@ -20,6 +16,7 @@ image_folders = {
 
 image_prefixes = {
     'en': 'COCO_train2014_',
+	'en2': '',
     'es': '',
     'it': 'COCO_train2014_',
 	'sw': ''
@@ -54,6 +51,8 @@ num_classes = {
 	'cifar100': 100,
 	'tiny': 200,
 	'imagenet': 1000,
+	'imagenet-sketch': 999,
+	'imagenet-r': 200,
 	'coco': 80
 }
 
@@ -62,17 +61,10 @@ delimiters = {
 	'cifar100': ' ',
 	'noun': ' ',
 	'imagenet': ' | ',
+	'imagenet-r': ' | ',
 	'composite': ' | ',
 	'wiki': ' ', 
 	'coco': ' '
-}
-
-flags = {
-	"reuse_fp_embedding": False,
-	"reuse_image_embedding": False, 
-	"reuse_image_data": False,
-	"using_filtered_images": False,
-	"reuse_text_embedding": True, 
 }
 
 image_batchsizes = {'imagenet':4, 'cifar100': 128, 'cifar10':128}

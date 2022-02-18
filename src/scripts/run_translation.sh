@@ -1,1 +1,1 @@
-python main.py --batch-size 64
+python main.py --config testing
