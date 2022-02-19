@@ -130,14 +130,11 @@ def load_models(lang, model_name, clip_data='coco', device='cuda', large_model=F
             img_model = img_model.to(device).eval()
             logit_scale = img_model.logit_scale.exp().float()
             clip_model = ClipObject(text_model, img_model, device=device)
-        else: # italian
-            model = EnglishClipObject(name='../results/clips/wtm/it.pt')
-            # model = EnglishClipObject()
-            return model, model.logit_scale, model.preprocess
-            preprocess = None
+        else: # italianx
             from models.clip_italian import get_italian_models
             img_model, text_model = get_italian_models()
             clip_model = ClipObject(text_model, img_model, italian=True, device=device)
             logit_scale = 20.0
+            preprocess = None
 
         return clip_model, logit_scale, preprocess

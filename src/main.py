@@ -153,7 +153,7 @@ if params.work_mode == 'translation': # translation
     print('\n..... Evaluating ..... ', params.word_data, params.emb_type, params.sim_score, params.matching_method)    
     scores = cal_similarity(params.sim_score, test_dico, embs) 
     lst = align_words(params.matching_method, test_dico, scores)
-    np.save(f'../results/indices_{params.src_lang}_{params.tgt_lang}_{params.word_data}', lst)
+    # np.save(f'../results/indices_{params.src_lang}_{params.tgt_lang}_{params.word_data}', lst)
 
     ###============= Translation =============##########
     # decorrelate

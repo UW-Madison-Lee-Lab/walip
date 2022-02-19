@@ -1,4 +1,4 @@
-
+import pdb
 import os
 import numpy as np
 import pandas as pd
@@ -122,7 +122,7 @@ def load_image_data(image_name, num_images, using_filtered_images, img_dir, prep
             if os.path.isfile(label_path):
                 labels = np.load(label_path, allow_pickle=True)
             else:
-                dataloader = DataLoader(image_dataset, batch_size=128, shuffle=False, drop_last=True, num_workers=4)
+                dataloader = DataLoader(image_dataset, batch_size=125, shuffle=False, drop_last=False, num_workers=0) #dataloader = DataLoader(image_dataset, batch_size=128, shuffle=False, drop_last=True, num_workers=4)
                 labels = []
                 for batch in tqdm(dataloader):
                     labels.append(batch[1].numpy())
@@ -131,7 +131,7 @@ def load_image_data(image_name, num_images, using_filtered_images, img_dir, prep
             labels = labels.flatten()
             for c in range(num_classes):
                 indices = np.argwhere(labels == c)
-                images += [image_dataset[indices[i][0]][0] for i in range(num_images)]
+                images += [image_dataset[indices[i][0]][0] for i in range(num_images)] #images += [image_dataset[indices[i].item()][0] for i in range(num_images)]
         elif image_name == 'coco':
             # Expected to have image_id, and labels columns
             captions_path = f"../dataset/coco/captions/en/{configs.caption_names['en']}"
