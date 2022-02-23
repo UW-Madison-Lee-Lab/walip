@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from funcy import chunks
 from tqdm import tqdm
 from utils.image_loader import load_image_data
-from utils.helper import save_images
+from utils.helper import save_images, generate_path, get_basename
 from models.templates import prompts, generate_texts
 from models.ops import load_models
 import configs
@@ -13,12 +13,8 @@ import configs
 class ClipEmbedding():
     def __init__(self, emb_type, lang, data_mode, opts):
         self.emb_type, self.lang, self.data_mode, self.opts = emb_type, lang, data_mode, opts
-        self.str_filter = 's' if self.opts.using_filtered_images else 'u'
-        suffix = ''
-        print(self.lang, emb_type, 'embedding!!!')
-        if self.emb_type == configs.FINGERPRINT:
-            suffix = f'_{self.opts.image_data}_{self.str_filter}'
-        self.emb_path = os.path.join(self.opts.emb_dir, f'{self.emb_type}{suffix}_{self.opts.word_data}_{self.lang}_{self.data_mode}.npy')
+        print(self.lang, emb_type, 'embedding')
+        self.emb_path = generate_path('emb_' + emb_type, {'lang': lang, 'src_lang': opts.src_lang, 'tgt_lang': opts.tgt_lang, 'word_data': opts.word_data, 'image_data': opts.image_data, 'data_mode': data_mode, 'selected': opts.using_filtered_images, 'num_images': opts.num_images})
         self.model = None
     
     def load_clip_model(self):
@@ -31,7 +27,7 @@ class ClipEmbedding():
     def load_embedding(self, vocabs=None):
         if self.opts.reuse_embedding:
             if os.path.isfile(self.emb_path):
-                print('.....', 'Reuse', self.emb_path)
+                print('.....', 'Reuse emb', get_basename(self.emb_path))
                 return np.load(self.emb_path, allow_pickle=True)
             else:
                 print("No embedding exists!!!")
@@ -50,9 +46,9 @@ class ClipEmbedding():
         return embs
 
     def load_clip_img_emb(self):
-        img_emb_pth = os.path.join(self.opts.img_dir, f'img_emb_{self.opts.image_data}_{self.lang}_k{self.opts.num_images}_{self.str_filter}.npy')
+        img_emb_pth = generate_path('emb_img', {'lang': self.lang, 'image_data': self.opts.image_data, 'selected': self.opts.using_filtered_images, 'num_images': self.opts.num_images})
         if self.opts.reuse_image_embedding and os.path.isfile(img_emb_pth):
-            print('.....', '.....', "Reuse image embedding", img_emb_pth)
+            print('.....', '.....', "Reuse img emb", get_basename(img_emb_pth))
             img_embs = np.load(img_emb_pth, allow_pickle=True)
             img_embs = torch.Tensor(img_embs).to(self.opts.device)
         else:
@@ -60,13 +56,13 @@ class ClipEmbedding():
                 self.load_clip_model()
             print('.....', '.....', "New image embedding") 
             ########### New Embeddings ############
-            img_pth = os.path.join(self.opts.img_dir, f'img_{self.opts.image_data}_{self.lang}_k{self.opts.num_images}_{self.str_filter}.npy')
+            img_pth = generate_path('img', {'lang': self.lang, 'image_data': self.opts.image_data, 'selected': self.opts.using_filtered_images, 'num_images': self.opts.num_images})
             if self.opts.reuse_image_data and os.path.isfile(img_pth): 
-                print('.....', '.....', '.....', "Reuse image data") 
+                print('.....', '.....', '.....', "Reuse img data") 
                 images = np.load(img_pth, allow_pickle=True)
             else:
-                print('.....', '.....', '.....', "New image data") 
-                images = load_image_data(self.opts.image_data, self.opts.num_images, self.opts.using_filtered_images, self.opts.img_dir, self.preprocess)
+                print('.....', '.....', '.....', "New img data") 
+                images = load_image_data(self.opts.image_data, self.opts.num_images, self.opts.using_filtered_images, self.opts.src_lang, self.opts.tgt_lang, self.preprocess)
                 np.save(img_pth, images)
             images = torch.Tensor(images)
             # save image 
@@ -84,14 +80,14 @@ class ClipEmbedding():
         return img_embs
 
     def load_clip_txt_emb(self, vocabs=None):
-        txt_emb_pth = os.path.join(self.opts.emb_dir, f'txt_emb_{self.opts.word_data}_{self.lang}_{self.data_mode}.npy')
+        txt_emb_pth = generate_path('emb_txt', {'lang': self.lang, 'word_data': self.opts.word_data, 'data_mode': self.data_mode})
         if self.opts.reuse_text_embedding and os.path.isfile(txt_emb_pth):
-            print('.....', '.....', "Reuse text embedding", txt_emb_pth)
+            print('.....', '.....', "Reuse txt emb", get_basename(txt_emb_pth))
             txt_embs = np.load(txt_emb_pth, allow_pickle=True)
         else:
             if self.model is None:
                 self.load_clip_model()
-            print('.....', '.....',  "New text embedding") 
+            print('.....', '.....',  "New txt emb") 
             texts = generate_texts(prompts[self.opts.image_data][self.lang], vocabs, k=self.opts.num_prompts)
             txt_embs = []
             K = len(prompts[self.opts.image_data][self.lang]) if -1 == self.opts.num_prompts else self.opts.num_prompts

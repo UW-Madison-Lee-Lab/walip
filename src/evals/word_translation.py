@@ -40,6 +40,8 @@ def get_nn_avg_dist(emb, query, knn):
     if FAISS_AVAILABLE:
         emb = emb.cpu().numpy()
         query = query.cpu().numpy()
+        emb = np.float32(emb)
+        query = np.float32(query)
         if hasattr(faiss, 'StandardGpuResources'):
             # gpu mode
             res = faiss.StandardGpuResources()
@@ -49,7 +51,9 @@ def get_nn_avg_dist(emb, query, knn):
         else:
             # cpu mode
             index = faiss.IndexFlatIP(emb.shape[1])
+        
         index.add(emb)
+        # TypeError: ndarrays must be of numpy.float32, and not float64.
         distances, _ = index.search(query, knn)
         return distances.mean(1)
     else:

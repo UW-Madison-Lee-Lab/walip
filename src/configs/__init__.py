@@ -3,6 +3,7 @@ model_names = {
 	"en2": "bert-base-uncased",
     "es": "../pretrained/uncased/",
     "it": "dbmdz/bert-base-italian-uncased",
+	'ru': 'something',
 	'sw': 'something'
 }
 
@@ -11,7 +12,8 @@ image_folders = {
 	"en2": '',
     "es": "spanish_images",
     "it": "train2014",
-	"sw": ''
+	"sw": '',
+	'ru': ''
 }
 
 image_prefixes = {
@@ -19,7 +21,8 @@ image_prefixes = {
 	'en2': '',
     'es': '',
     'it': 'COCO_train2014_',
-	'sw': ''
+	'sw': '',
+	'ru': ''
 }
 caption_names = {
     "en": "processed_captions_train2014.csv",
@@ -75,3 +78,5 @@ FINGERPRINT = 'fp'
 FASTTEXT = 'fasttext'
 GANFASTTEXT = 'ganfasttext200'
 CLIPTEXT = 'cliptext'
+
+

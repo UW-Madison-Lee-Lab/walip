@@ -3,10 +3,12 @@ import torch
 from tclip.CLIP import CLIPModel
 import numpy as np
 import clip
+import ruclip
 import torch.nn.functional as F
 from transformers import AutoTokenizer
 from typing import Any, Union, List
 from tclip.simple_tokenizer import SimpleTokenizer as _Tokenizer
+from torch.nn.utils.rnn import pad_sequence
 
 def italian_tokenize(_tokenizer, tokenizer, texts: Union[str, List[str]], context_length: int = 77, truncate: bool = False) -> torch.LongTensor:
     """
@@ -86,6 +88,25 @@ class EnglishClipObject():
         text_embeddings = self.clip_model.encode_text(text_tokens).type(torch.FloatTensor).to(self.device)
         return text_embeddings
 
+class RuClipObject():
+    def __init__(self, name='ruclip-vit-base-patch32-384', device="cuda") -> None:
+        self.clip_model, self.clip_processor = ruclip.load(name, device=device)
+        self.clip_model = self.clip_model.to(device).eval()
+        self.logit_scale = self.clip_model.logit_scale.exp().float()
+        self.preprocess = self.clip_processor.image_transform
+        self.device = device
+    
+    def encode_image(self, imgs):
+        image_latents = self.clip_model.encode_image(imgs.to(self.device))
+        image_embeddings = image_latents / image_latents.norm(dim=-1, keepdim=True)
+        return image_embeddings
+
+    def encode_text(self, txts):
+        inputs = self.clip_processor(text=txts, return_tensors='pt', padding=True)
+        text_embeddings = self.clip_model.encode_text(inputs['input_ids'].to(self.device))
+        # .type(torch.FloatTensor)
+        return text_embeddings
+
 class ItalianClipObject():
     def __init__(self, name="ViT-B/32", device="cuda") -> None:
         self.clip_model, self.preprocess = clip.load(name)
@@ -130,7 +151,7 @@ def load_models(lang, model_name, clip_data='coco', device='cuda', large_model=F
             img_model = img_model.to(device).eval()
             logit_scale = img_model.logit_scale.exp().float()
             clip_model = ClipObject(text_model, img_model, device=device)
-        else: # italian
+        elif lang == 'it': # italian
             model = EnglishClipObject(name='../results/clips/wtm/it.pt')
             # model = EnglishClipObject()
             return model, model.logit_scale, model.preprocess
@@ -139,5 +160,9 @@ def load_models(lang, model_name, clip_data='coco', device='cuda', large_model=F
             img_model, text_model = get_italian_models()
             clip_model = ClipObject(text_model, img_model, italian=True, device=device)
             logit_scale = 20.0
+        elif lang == 'ru':
+            model = RuClipObject(name='ruclip-vit-base-patch32-224')
+            # model = EnglishClipObject()
+            return model, model.logit_scale, model.preprocess
 
         return clip_model, logit_scale, preprocess

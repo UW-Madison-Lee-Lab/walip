@@ -1,4 +1,5 @@
 # from matplotlib import pyplot as plt
+import os
 from itertools import chain
 from torchvision.utils import save_image
 
@@ -58,7 +59,7 @@ def get_accuracy(dico, col_ind):
             wrong_pairs.append([i, col_ind[i], dico[i, 1]])
             # print(i, '->', col_ind[i], vocabs[0][i], '->', vocabs[0][col_ind[i]])
     acc = s/dico.shape[0] * 100
-    print('Accuracy: {:.4f}'.format(acc))
+    print('Accuracy: {:.4f}/100'.format(acc))
     return acc, wrong_pairs
 
 
@@ -103,3 +104,54 @@ def dict2clsattr(train_configs, model_configs):
     cfg_container.model_configs = model_configs
     setattr_cls_from_kwargs(cfg_container, cfgs)
     return cfg_container
+
+
+def try_make_dir(d):
+    if not os.path.isdir(d):
+        # os.mkdir(d)
+        os.makedirs(d) # nested is allowed
+
+def get_basename(fpath):
+    basename = os.path.basename(fpath)
+    return basename.split('.')[0]
+
+def generate_path(ftype, opts):
+    root = '../dicts/'
+    if 'selected' in opts:
+        s = 's' if opts["selected"] else 'u'
+    if ftype.startswith('emb'):
+        root += 'embeddings/'
+        if ftype == 'emb_txt':
+            fdir = f'txt_emb/{opts["word_data"]}/'
+            fname = f'txt_emb_{opts["word_data"]}_{opts["lang"]}_{opts["data_mode"]}.npy'
+        elif ftype == 'emb_img':
+            fdir = f'img_emb/{opts["image_data"]}/'
+            fname = f'img_emb_{opts["image_data"]}_{opts["lang"]}_k{opts["num_images"]}_{s}.npy'
+        elif ftype == 'emb_fp':
+            prefix = f'{opts["image_data"]}_{s}_{opts["word_data"]}'
+            fdir = f'fp/{prefix}/'
+            fname = f'fp_{prefix}_{opts["lang"]}_{opts["data_mode"]}.npy'
+        elif ftype == 'emb_fasttext': # fasttext
+            fdir = f'fasttext/{opts["word_data"]}/'
+            fname = f'fasttext_{opts["word_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.npy'
+    elif ftype.startswith('img'):
+        fdir = f'images/{opts["image_data"]}/'
+        if ftype == 'img':
+            fname = f'img_{opts["image_data"]}_{opts["lang"]}_k{opts["num_images"]}_{s}.npy'
+        elif ftype == 'img_label':
+            fname = f'label_{opts["image_data"]}.npy'
+        elif ftype == 'img_index':
+            fname = f'index_{opts["image_data"]}_{opts["lang"]}.npy'
+        elif ftype == 'img_shared_index':
+            fname = f'shared_index_{opts["image_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}.npy'
+    elif ftype == 'txt_single':
+        fdir = f'texts/{opts["word_data"]}/'
+        fname = f'{opts["word_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.txt'
+    elif ftype == 'txt_pair':
+        fdir = f'texts/{opts["word_data"]}/'
+        fname = f'{opts["word_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["data_mode"]}.txt'
+    
+    
+    folder = os.path.join(root, fdir)
+    try_make_dir(folder)
+    return os.path.join(folder, fname)

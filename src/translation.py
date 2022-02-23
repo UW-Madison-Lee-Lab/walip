@@ -5,34 +5,49 @@ import scipy.optimize
 from scipy import stats
 import torch.nn.functional as F
 from evals.word_translation import get_csls_word_translation, build_dictionary, get_topk_translation_accuracy, load_dictionary
-from utils.helper import get_accuracy
+from utils.helper import get_accuracy, generate_path
 from utils.text_loader import combine_files
 from quad_ot.gmp import quadratic_assignment_ot
 import configs
 
 
 
-def cal_similarity(sim_score, dico, embs):
-    for l in ['src', 'tgt']:
-        embs[l] = F.normalize(embs[l], dim=1)
+def cal_ranking_sim(emb, N_RANK, row_ranking=True):
+    rank_emb = torch.zeros(emb.shape).to(emb.device)
+    nrows, ncols = emb.shape
+    if row_ranking:
+        ranks = torch.topk(emb, N_RANK, dim=1)[1]# nrows x k
+        for r in range(nrows):
+            for k in range(N_RANK):
+                ind = ranks[r, k]
+                if emb[r, ind] > 0:
+                    rank_emb[r, ind] = N_RANK - k
+    else:
+        ranks = torch.topk(emb, N_RANK, dim=0)[1]
+        for c in range(ncols):
+            for k in range(N_RANK):
+                ind = ranks[k, c]
+                rank_emb[ind, c] = N_RANK - k
+    rank_emb = F.normalize(rank_emb, dim=1)
+    return rank_emb
 
+
+def cal_similarity(sim_score, dico, embs, row_ranking=True):
     if sim_score in ['csls', 'cosine']:
+        for l in ['src', 'tgt']:
+            # t = torch.quantile(embs[l], 0.9)
+            # t = torch.median(embs[l])
+            # embs[l] = embs[l] * (embs[l] > t)
+            embs[l] = F.normalize(embs[l], dim=1)
         scores = get_csls_word_translation(dico, embs['src'], embs['tgt'], sim_score)
-    elif sim_score == 'inner_prod':
-        test_emb0 = embs['src'][dico[:, 0]]
-        test_emb1 = embs['tgt'][dico[:, 1]]
-        scores = test_emb0 @ test_emb1.T 
     elif sim_score == 'ranking':
+        nrows, ncols = embs['src'].shape
+        N_RANK = min(10, int(ncols * 0.02))
         rank_embs = {}
         for l in ['src', 'tgt']:
-            ranks = torch.topk(embs[l], 10, dim=1)[1].cpu().numpy()
-            rank_embs[l] = np.zeros(embs[l].shape)
-            for r in range(ranks.shape[0]):
-                for k in range(10):
-                    rank_embs[l][r, ranks[r, k]] = 10 - k
+            rank_embs[l] = cal_ranking_sim(embs[l], N_RANK, row_ranking)
         scores = rank_embs['src'] @ rank_embs['tgt'].T
-        scores = torch.from_numpy(scores).to(embs.device)
-
+        # scores = get_csls_word_translation(dico, rank_embs['src'], rank_embs['tgt'], 'csls')
     return scores
 
 
@@ -52,8 +67,8 @@ def align_words(matching_method, dico, scores):
             print("Precision@1 ", correct, total, correct/total)
             return lst
         
-        threshold = torch.quantile(s[0], 0.5)
-        print('Threshold', threshold)
+        threshold = torch.quantile(s[0], 0.5) #0.5 -- it
+        print('Threshold', threshold.item())
         lst = get_precision(s, threshold)
         # np.save('../results/lst', np.asarray(lst))
         return np.asarray(lst)
@@ -66,9 +81,9 @@ def align_words(matching_method, dico, scores):
 
 
 def load_test_dict(params, word2ids):
-    test_fpath = params.txt_dir + f'{params.word_data}_{params.src_lang}_{params.tgt_lang}_{params.data_mode}.txt'
+    test_fpath = generate_path('txt_pair',  {'word_data': params.word_data, 'src_lang': params.src_lang, 'tgt_lang': params.tgt_lang, 'data_mode': params.data_mode})
     if not os.path.isfile(test_fpath):
-        combine_files(params)
+        combine_files(params.langs, params.word_data, params.data_mode)
     test_dico = load_dictionary(test_fpath, word2ids['src'], word2ids['tgt'], delimiter=configs.delimiters[params.word_data])
     test_dico = test_dico.cuda()
     return test_dico
@@ -82,6 +97,24 @@ def train_supervision(X1, X2):
     # W = U @ VT
     W = U.dot(VT)
     return torch.Tensor(W).cuda()
+
+def robust_procrustes(X, Y):
+    n, k = X.shape
+    W = train_supervision(X, Y)
+    # W = torch.randn(k, k).to(X.device)
+    D = torch.eye(n).to(X.device)
+    for i in range(20):
+        e = Y - X @ W.T
+        weights = 1/(torch.abs(e) + 0.01)
+        M = weights.max(dim=1, keepdim=True)[0]   
+        for i in range(n):
+            D[i, i] = M[i, 0]
+        R = (1 - weights/M) * (X @ W.T) + (weights/M) * Y
+        S = X.T @ D @ R
+        U, Sigma, VT = scipy.linalg.svd(S.cpu().numpy(), full_matrices=True)
+        W = U @ VT
+        W = torch.Tensor(W).cuda()
+    return W
 
 def refinement(params, W, embs):
     # Get the best mapping according to VALIDATION_METRIC

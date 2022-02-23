@@ -4,23 +4,24 @@ import numpy as np
 
 import torch
 from torch.utils.data import DataLoader
-from models.ops import load_models
-from tclip.clip_ops import load_image_and_class
-from tqdm import tqdm
 import torch.nn.functional as F
-from utils.helper import AverageMeter, accuracy
-
+from tqdm import tqdm
+from models.ops import load_models
+from tclip.clip_ops import load_label_embs
+from utils.image_loader import load_image_dataset
+from utils.helper import AverageMeter, accuracy, generate_path
 import configs
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def find_correct_images(lang, opts):
     nclasses = configs.num_classes[opts.image_data]
-    model_name = configs.model_names[lang]
-    model, logit_scale, preprocess = load_models(lang, model_name, 'coco', opts.device, opts.large_model)
-    text_features, dataloader = load_image_and_class(model, preprocess, opts.image_data, lang, opts)
-    text_features = F.normalize(text_features, dim=1)
+    model, logit_scale, preprocess = load_models(lang, configs.model_names[lang], 'coco', opts.device, opts.large_model)
+    label_embeddings = load_label_embs(model, lang, opts.word_data, opts.data_mode, opts.num_prompts)
+    image_dataset = load_image_dataset(opts.image_data, preprocess=preprocess)
+    dataloader = DataLoader(image_dataset, batch_size=opts.batch_size, shuffle=False, drop_last=True, num_workers=4)
     tqdm_object = tqdm(dataloader, total=len(dataloader))
+
     indices = {}
     s, total, batch_idx = 0, 0, 0
     top5, top1 = AverageMeter(), AverageMeter()
@@ -28,8 +29,8 @@ def find_correct_images(lang, opts):
         targets = labels.long().to(opts.device)
         with torch.no_grad():
             image_features = model.encode_image(images.to(opts.device))
-            image_features = F.normalize(image_features, dim=1)
-        logits = image_features @ text_features.t() * logit_scale
+            # image_features = F.normalize(image_features, dim=1)
+        logits = image_features @ label_embeddings.t() * logit_scale
         _, pred = logits.topk(1, 1, True, True)
         pred = pred.t()
         correct = pred.eq(targets.view(1, -1).expand_as(pred))[0].cpu().numpy()
@@ -45,17 +46,10 @@ def find_correct_images(lang, opts):
             indices[t].append(x + batch_idx * images.size(0))
         batch_idx += 1
 
-    fname = os.path.join(opts.img_dir, f'{opts.image_data}_{lang}_correct_index')
-    np.save(fname, indices)
-    f = open(fname + ".txt", 'w')
-    for i in range(nclasses):
-        if i in indices:
-            f.write("{} {}\n".format(i, indices[i]))
-        else:
-            print(i, 'not in indices')
-    f.close()
-
+    fpath = generate_path('img_index', {'image_data': opts.image_data, 'lang': lang, 'num_prompts': opts.num_prompts})
+    np.save(fpath, indices)
     print(top1.avg, top5.avg)
+    print('#-classes', len(indices))
 
 
 def find_interesection(data_name, opts):
@@ -65,21 +59,18 @@ def find_interesection(data_name, opts):
 
     indices = []
     for l in [opts.src_lang, opts.tgt_lang]:
-        fpath = os.path.join(opts.img_dir, f'{data_name}_{l}_correct_index.npy')
+        fpath = generate_path('img_index', {'image_data': opts.image_data, 'lang': l, 'num_prompts': opts.num_prompts})
         indices.append(np.load(fpath, allow_pickle=True).item())
 
     keys = intersect(list(indices[0].keys()), list(indices[1].keys()))
-    ans = {}
+    ans, lst = {}, []
     for k in sorted(keys):
         values = intersect(indices[0][k], indices[1][k])
         if len(values) > 0:
-            ans[k] = values[0]
+            ans[k] = values
         else:
-            print(k) # 36
-    fname = os.path.join(opts.img_dir, '{}_{}_{}_index'.format(data_name, opts.src_lang, opts.tgt_lang))
-    np.save(fname, ans)
-    f = open(fname + ".txt", 'w')
-    # image_dataset.classes[0]
-    for k in sorted(ans.keys()):
-        f.write("{} {}\n".format(k, ans[k]))
-    f.close()
+            lst.append(k)
+
+    fpath = generate_path('img_shared_index', {'image_data': opts.image_data, 'src_lang': opts.src_lang, 'tgt_lang': opts.tgt_lang, 'num_prompts': opts.num_prompts})
+    np.save(fpath, ans)
+    print('Not shared: ', lst)

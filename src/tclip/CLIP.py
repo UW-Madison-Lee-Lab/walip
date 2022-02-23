@@ -56,11 +56,8 @@ class CLIPModel(nn.Module):
 
     def get_embeddings(self, batch):
         # Getting Image and Text Features
-        with torch.no_grad():
-            image_features = self.image_encoder(batch["image"])
-            text_features = self.text_encoder(
-            input_ids=batch["input_ids"], attention_mask=batch["attention_mask"]
-        )
+        image_features = self.image_encoder(batch["image"])
+        text_features = self.text_encoder(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"])
         # Getting Image and Text Embeddings (with same dimension)
         # image_embeddings = F.normalize(self.image_projection(image_features), dim=1)
         # text_embeddings = F.normalize(self.text_projection(text_features), dim=1)
@@ -129,13 +126,11 @@ class NewCLIPModel(object):
         self.temperature = 0.07
     
     def encode_image(self, images):
-        with torch.no_grad():
-            image_embeddings = self.image_encoder(images)
-            # image_embeddings = F.normalize(image_embeddings, dim=-1)
+        image_embeddings = self.image_encoder(images)
+        # image_embeddings = F.normalize(image_embeddings, dim=-1)
         return image_embeddings
 
     def encode_text(self, texts):
-        # with torch.no_grad():
         text_tokens = self.tokenizer(texts, padding=True, truncation=True, max_length=200)
         item = {key: torch.tensor(values).to(self.device) for key, values in text_tokens.items()}
         text_features = self.text_encoder(

@@ -14,11 +14,10 @@ from tqdm import tqdm
 import numpy as np
 
 
-def load_image_and_class(model, preprocess, image_data, lang, opts, multilabel = False):
-    vocab = load_vocabs(opts, lang)
-    texts = generate_texts(prompts[opts.word_data][lang], vocab, k=opts.num_prompts)
-
-    K = opts.num_prompts
+def load_label_embs(model, lang, word_data, data_mode, num_prompts):
+    vocab = load_vocabs(lang, word_data, data_mode)
+    texts = generate_texts(prompts[word_data][lang], vocab, k=num_prompts)
+    K = num_prompts
     text_embeddings = []
     for batch_texts in tqdm(chunks(128*K, texts)):
         with torch.no_grad():
@@ -31,35 +30,35 @@ def load_image_and_class(model, preprocess, image_data, lang, opts, multilabel =
             batch_txt_embs = F.normalize(batch_txt_embs, dim=-1)
             text_embeddings.append(batch_txt_embs)
     text_embeddings = torch.cat(text_embeddings, dim=0)
-    image_dataset = load_image_dataset(image_data, preprocess=preprocess, multilabel = multilabel)
-    dataloader = DataLoader(image_dataset, batch_size=opts.batch_size, shuffle=False, drop_last=True, num_workers=4)
+    return text_embeddings
 
-    return text_embeddings, dataloader
+# def load_image_and_class(model, preprocess, image_data, lang, opts, multilabel = False):
+#     image_dataset = load_image_dataset(image_data, preprocess=preprocess, multilabel = multilabel)
+#     dataloader = DataLoader(image_dataset, batch_size=opts.batch_size, shuffle=False, drop_last=True, num_workers=4)
+#     return text_embeddings, dataloader
 
 
-def evaluate_classification(image_data, lang, opts, model=None):
-    if model is None:
-        model_name = configs.model_names[lang]
-        model, logit_scale, preprocess = load_models(lang, model_name, 'coco', opts.device, opts.large_model) 
-    else:
-        preprocess = None
-    text_embeddings, dataloader = load_image_and_class(model, preprocess, image_data, lang, opts)
+def zero_shot_classification(model, image_data, word_data, lang, num_prompts, logit_scale, preprocess=None, device='cuda', test_perclass=False):
+    label_embeddings = load_label_embs(model, lang, word_data, data_mode, num_prompts)
     image_dataset = load_image_dataset(image_data, preprocess=preprocess)
-    s = 0
-    scores = []
-    num_classes = configs.num_classes[image_data]
-    for c in range(num_classes):
-        indices = np.argwhere(np.asarray(image_dataset.targets) == c)
-        indices = indices.reshape(len(indices))
-        data = Subset(image_dataset, indices.tolist())
-        dataloader = DataLoader(data, batch_size=opts.batch_size, shuffle=False, drop_last=True, num_workers=4)
-        print("Class ", c)
-        top1, top5 = validate(model, text_embeddings, dataloader, opts.device, logit_scale)
-        s += top1
-        scores.append(top1)
-    print('ACC: ', s/num_classes)
-    for i in range(num_classes):
-        print(scores[i])
+    s, scores, batch_size = 0, [], 64
+    if test_perclass:
+        num_classes = configs.num_classes[image_data]
+        for c in range(num_classes):
+            indices = np.argwhere(np.asarray(image_dataset.targets) == c)
+            indices = indices.reshape(len(indices))
+            data = Subset(image_dataset, indices.tolist())
+            dataloader = DataLoader(data, batch_size=batch_size, shuffle=False, drop_last=True, num_workers=4)
+            print("Class ", c)
+            top1, top5 = validate(model, label_embeddings, dataloader, device, logit_scale)
+            s += top1
+            scores.append(top1)
+        print('ACC: ', s/num_classes)
+        for i in range(num_classes):
+            print(scores[i])
+    else:
+        dataloader = DataLoader(image_dataset, batch_size=batch_size, shuffle=False, drop_last=True, num_workers=4)
+        top1, top5 = validate(model, text_embeddings, dataloader, device, logit_scale)
     
 def validate(model, text_embeddings, dataloader, device, logit_scale=1.0):
     text_embeddings = text_embeddings.type(torch.FloatTensor).to(device)
