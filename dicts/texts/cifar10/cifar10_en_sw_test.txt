@@ -1,0 +1,10 @@
+airplane flygplan
+automobile bil
+bird fågel
+cat katt
+deer rådjur
+dog hund
+frog groda
+horse häst
+ship fartyg
+truck lastbil

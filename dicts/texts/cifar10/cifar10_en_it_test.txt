@@ -4,7 +4,7 @@ bird uccello
 cat gatto
 deer cervo
 dog cane
-frog rana
+frog ranocchio
 horse cavallo
 ship nave
-truck camion
+truck autocarro

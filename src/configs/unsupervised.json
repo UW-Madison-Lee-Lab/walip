@@ -1,10 +1,10 @@
 {
   "langs": {
-    "src_lang": "en",
-    "tgt_lang": "it"
+    "src_lang": "ru",
+    "tgt_lang": "en"
  },
   "words":{ 
-    "word_data" : "wiki",
+    "word_data" : "wiki_noun",
     "data_mode" : "test"
   },
   "images": {
@@ -16,18 +16,18 @@
 
   "model": {
     "emb_type": "fp",
-    "large_model": false,
+    "large_model": true,
     "sim_score": "csls",
-    "row_ranking": false,
+    "row_ranking": true,
     "matching_method": "nn"
   },
 
   "work": {
     "work_mode": "translation",
     "method": "unsupervised",
-    "reuse_embedding":1,
+    "reuse_embedding": 0,
     "reuse_text_embedding": 0,
-    "reuse_image_embedding": 0,
+    "reuse_image_embedding": 1,
     "reuse_image_data": 1
   },
 

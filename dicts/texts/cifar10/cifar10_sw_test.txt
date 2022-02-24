@@ -1,0 +1,10 @@
+flygplan
+bil
+fågel
+katt
+rådjur
+hund
+groda
+häst
+fartyg
+lastbil

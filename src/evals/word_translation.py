@@ -149,8 +149,12 @@ def get_csls_word_translation(dico, emb1, emb2, sim_score='csls'):
     # emb2 = emb2 / emb2.norm(2, 1, keepdim=True).expand_as(emb2)
 
     # nearest neighbors
-    if sim_score == 'cosine':
+    if dico is None:
+        query = emb1
+    else:
         query = emb1[dico[:, 0]]
+
+    if sim_score == 'cosine':
         scores = query.mm(emb2.transpose(0, 1))
 
     # contextual dissimilarity measure
@@ -164,10 +168,13 @@ def get_csls_word_translation(dico, emb1, emb2, sim_score='csls'):
         average_dist1 = torch.from_numpy(average_dist1).type_as(emb1)
         average_dist2 = torch.from_numpy(average_dist2).type_as(emb2)
         # queries / scores
-        query = emb1[dico[:, 0]]
+        # query = emb1[dico[:, 0]]
         scores = query.mm(emb2.transpose(0, 1))
         scores.mul_(2)
-        scores.sub_(average_dist1[dico[:, 0]][:, None])
+        if dico is None:
+            scores.sub_(average_dist1[:, None])
+        else:
+            scores.sub_(average_dist1[dico[:, 0]][:, None])
         scores.sub_(average_dist2[None, :])
 
     else:

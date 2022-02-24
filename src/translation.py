@@ -32,12 +32,13 @@ def cal_ranking_sim(emb, N_RANK, row_ranking=True):
     return rank_emb
 
 
-def cal_similarity(sim_score, dico, embs, row_ranking=True):
+def cal_similarity(sim_score, dico, embs, emb_type, row_ranking=True):
     if sim_score in ['csls', 'cosine']:
         for l in ['src', 'tgt']:
-            # t = torch.quantile(embs[l], 0.9)
-            # t = torch.median(embs[l])
-            # embs[l] = embs[l] * (embs[l] > t)
+            if emb_type == 'fp':
+                # t = torch.median(embs[l])
+                t = torch.quantile(embs[l], 0.9)
+                embs[l] = embs[l] * (embs[l] > t)
             embs[l] = F.normalize(embs[l], dim=1)
         scores = get_csls_word_translation(dico, embs['src'], embs['tgt'], sim_score)
     elif sim_score == 'ranking':
@@ -46,8 +47,8 @@ def cal_similarity(sim_score, dico, embs, row_ranking=True):
         rank_embs = {}
         for l in ['src', 'tgt']:
             rank_embs[l] = cal_ranking_sim(embs[l], N_RANK, row_ranking)
-        scores = rank_embs['src'] @ rank_embs['tgt'].T
-        # scores = get_csls_word_translation(dico, rank_embs['src'], rank_embs['tgt'], 'csls')
+        # scores = rank_embs['src'] @ rank_embs['tgt'].T
+        scores = get_csls_word_translation(dico, rank_embs['src'], rank_embs['tgt'], 'csls')
     return scores
 
 
@@ -62,13 +63,13 @@ def align_words(matching_method, dico, scores):
                 if s[0][i] > threshold:
                     total +=1
                     lst.append([i, s[1][i].cpu().numpy()])
-                    if s[1][i] == i:
-                        correct += 1
-            print("Precision@1 ", correct, total, correct/total)
+                    # if s[1][i] == i:
+                        # correct += 1
+            # print("Precision@1 ", correct, total, correct/total)
             return lst
         
         threshold = torch.quantile(s[0], 0.5) #0.5 -- it
-        print('Threshold', threshold.item())
+        # print('Threshold', threshold.item())
         lst = get_precision(s, threshold)
         # np.save('../results/lst', np.asarray(lst))
         return np.asarray(lst)
@@ -102,6 +103,30 @@ def robust_procrustes(X, Y):
     n, k = X.shape
     W = train_supervision(X, Y)
     # W = torch.randn(k, k).to(X.device)
+    D = torch.eye(n).to(X.device)
+    X1 = X
+    Y1 = Y
+    for j in range(15):
+        # e = ((Y1 - X1 @ W.T)**2).sum(dim=1)
+        e = (torch.abs(Y1 - X1 @ W.T)).sum(dim=1)
+        alphas = 1/(e + 0.01)**2
+        alphas = alphas / alphas.max()
+        # t = torch.quantile(alphas, 0.2)
+        # alphas = alphas * (alphas > t)
+        for i in range(n):
+            D[i, i] = alphas[i]**0.5
+        X1 = D @ X1
+        Y1 = D @ Y1
+        M = Y1.T @ X1
+        U, Sigma, VT = scipy.linalg.svd(M.cpu().numpy(), full_matrices=True)
+        W = U @ VT
+        W = torch.Tensor(W).cuda()
+        # print(j, e.sum().item())
+    return W
+
+def robust_procrustes1(X, Y):
+    n, k = X.shape
+    W = train_supervision(X, Y)
     D = torch.eye(n).to(X.device)
     for i in range(20):
         e = Y - X @ W.T

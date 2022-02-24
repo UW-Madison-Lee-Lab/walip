@@ -123,14 +123,14 @@ def generate_path(ftype, opts):
         root += 'embeddings/'
         if ftype == 'emb_txt':
             fdir = f'txt_emb/{opts["word_data"]}/'
-            fname = f'txt_emb_{opts["word_data"]}_{opts["lang"]}_{opts["data_mode"]}.npy'
+            fname = f'txt_emb_{opts["word_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.npy'
         elif ftype == 'emb_img':
             fdir = f'img_emb/{opts["image_data"]}/'
             fname = f'img_emb_{opts["image_data"]}_{opts["lang"]}_k{opts["num_images"]}_{s}.npy'
         elif ftype == 'emb_fp':
             prefix = f'{opts["image_data"]}_{s}_{opts["word_data"]}'
             fdir = f'fp/{prefix}/'
-            fname = f'fp_{prefix}_{opts["lang"]}_{opts["data_mode"]}.npy'
+            fname = f'fp_{prefix}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.npy'
         elif ftype == 'emb_fasttext': # fasttext
             fdir = f'fasttext/{opts["word_data"]}/'
             fname = f'fasttext_{opts["word_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.npy'

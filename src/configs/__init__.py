@@ -67,7 +67,8 @@ delimiters = {
 	'imagenet-r': ' | ',
 	'composite': ' | ',
 	'wiki': ' ', 
-	'coco': ' '
+	'coco': ' ',
+	'wiki_noun': ' '
 }
 
 image_batchsizes = {'imagenet':4, 'cifar100': 128, 'cifar10':128}

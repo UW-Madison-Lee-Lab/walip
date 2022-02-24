@@ -1,7 +1,7 @@
 {
   "langs": {
-    "src_lang": "en",
-    "tgt_lang": "ru"
+    "src_lang": "ru",
+    "tgt_lang": "en"
  },
   "words":{ 
     "word_data" : "wiki",
@@ -10,7 +10,7 @@
   "images": {
     "image_data": "imagenet",
     "num_images": 10,
-    "num_prompts": 10,
+    "num_prompts": 4,
     "using_filtered_images": false
   },
 
@@ -22,11 +22,11 @@
   },
 
   "work": {
-    "work_mode": "retrieval_k",
+    "work_mode": "cluster_noun",
     "method": "unsupervised",
     "test_perclass": false,
-    "reuse_embedding": 1,
-    "reuse_text_embedding": 1,
+    "reuse_embedding": 0,
+    "reuse_text_embedding": 0,
     "reuse_image_embedding": 1,
     "reuse_image_data": 1
   },

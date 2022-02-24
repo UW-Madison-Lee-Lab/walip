@@ -51,5 +51,6 @@ def combine_files(langs, word_data, data_mode):
 def get_word2id(vocab):
     word2id = {}
     for i in range(len(vocab)):
-        word2id[vocab[i]] = i
+        if not (vocab[i] in  word2id):
+            word2id[vocab[i]] = i
     return word2id

@@ -369,8 +369,18 @@ prompts = {
         ]
     },
     'imagenet': {
-        'en': imagenet_en_templates,
-        'ru': ru_imagenet_template,
+        'en': [
+            '{}',
+             'this {}',
+             'on the picture {}',
+             'this is {}, pet'
+        ],
+        'ru': [
+            '{}', 
+            'это {}', 
+            'на картинке {}', 
+            'это {}, домашнее животное'
+        ],
         'en1': [
             "itap of a {}.",
             "a bad photo of the {}.",

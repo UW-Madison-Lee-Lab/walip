@@ -1,16 +1,16 @@
 {
   "langs": {
-    "src_lang": "en",
-    "tgt_lang": "ru"
+    "src_lang": "ru",
+    "tgt_lang": "en"
  },
   "words":{ 
-    "word_data" : "wiki",
+    "word_data" : "wiki_noun",
     "data_mode" : "test"
   },
   "images": {
     "image_data": "imagenet",
     "num_images": 10,
-    "num_prompts": 10,
+    "num_prompts": 4,
     "using_filtered_images": false
   },
 
@@ -24,7 +24,7 @@
 
   "work": {
     "work_mode": "translation",
-    "method": "supervised",
+    "method": "semi",
     "reuse_embedding": 1,
     "reuse_text_embedding": 1,
     "reuse_image_embedding": 0,

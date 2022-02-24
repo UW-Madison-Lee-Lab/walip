@@ -3,7 +3,7 @@ import numpy as np
 import torch.nn.functional as F
 from scipy import stats
 from tclip.clip_ops import zero_shot_classification
-from utils.text_loader import get_word2id, load_vocabs, load_vocabs_from_pairs
+from utils.text_loader import get_word2id, load_vocabs, load_vocabs_from_pairs, write_vocabs
 from utils.helper import dict2clsattr
 from translation import align_words, load_test_dict, train_supervision, cal_similarity, robust_procrustes
 from models.embedding import ClipEmbedding
@@ -21,7 +21,8 @@ args = parser.parse_args()
 config_file = {
     'u': 'unsupervised',
     's': 'semi',
-    'a': 'analysis'
+    'a': 'analysis',
+    'r': 'robustness'
 }[args.config]
 with open(f"configs/{config_file}.json") as f:
     model_config = json.load(f)
@@ -35,7 +36,7 @@ args.device = torch.device('cuda') if torch.cuda.is_available() else torch.devic
 def prepare_embeddings(emb_type, langs, word_data, data_mode, opts, multi_embs=False):
     word2ids, embs = {}, {}
     for key, lang in langs.items():
-        vocab = load_vocabs(lang, langs, word_data, data_mode)
+        vocab = load_vocabs(lang, opts.langs, word_data, data_mode)
         embObj = ClipEmbedding(emb_type, lang, data_mode, opts)
         if multi_embs:
             txt_embs = embObj.load_clip_txt_emb(vocab)
@@ -69,6 +70,23 @@ if args.work_mode == 'image_retrieval':
     u = u.softmax(dim=-1)
     s = u.argsort(descending=True, dim=1)
     print(s[:, :3])
+    sys.exit("DONE!!!!") 
+
+if args.work_mode == 'cluster_noun':
+    _, embs = prepare_embeddings(args.emb_type, args.langs, args.word_data, args.data_mode, args, multi_embs=False)
+    for l in ['src', 'tgt']:
+        vocab = load_vocabs(args.langs[l], args.langs, args.word_data, args.data_mode)
+        fp = embs[l] # n x m
+        max_cos = torch.topk(fp, 2, dim=1)[0].sum(dim=1).cpu().numpy()
+        med = np.quantile(max_cos, 0.5)
+        ind = np.where(max_cos > med)[0]
+        nouns = []
+        for i in ind:
+            if vocab[i] not in nouns:
+                # new_ind.append(i)
+                nouns.append(vocab[i])
+            # nouns = set(nouns)
+        write_vocabs(nouns, args.langs[l], args.langs, 'wiki_noun', args.data_mode)
     sys.exit("DONE!!!!") 
 
 if args.work_mode == 'retrieval':
@@ -137,54 +155,73 @@ if args.work_mode == 'retrieval_k':
                 wrong_pairs.append([i, x[0][0], y[0][0]])
     # print('wrong-pairs ', wrong_pairs)
     print('Retrieval: {}/{} -- Correct {:.2f}/100 - Recall: {:.2f}/100'.format(count, total, count/total*100, count/N * K * 100))
-    from IPython import embed; embed()
     sys.exit("DONE!!!!") 
 
 if args.work_mode == 'translation': # translation
     lst_path = f'../results/indices_{args.src_lang}_{args.tgt_lang}_{args.word_data}_{args.large_model}.npy'
     if args.method == "semi":
+        inds = np.load(lst_path, allow_pickle=True)
+        nouns = {}
+        for l in ['src', 'tgt']:
+            c = 0 if l == 'src' else 1
+            vocab = load_vocabs(args.langs[l], args.langs, args.word_data, args.data_mode)
+            nouns[l] = [vocab[i] for i in inds[:, c]]
+
+        args.word_data = 'wiki'
         word2ids, embs = prepare_embeddings(args.emb_type, args.langs, args.word_data, args.data_mode, args)
         test_dico = load_test_dict(args, word2ids)
-        inds = np.load(lst_path, allow_pickle=True)
-        X0 = embs['src'][inds[:, 0], :]
-        X1 = embs['tgt'][inds[:, 1], :]
+        indices = {}
+        for l in ['src', 'tgt']:
+            indices[l] = [word2ids[l][w] for w in nouns[l]] 
+        X0 = embs['src'][indices['src'], :]
+        X1 = embs['tgt'][indices['tgt'], :]
         # X0 = embs['src'][:500, :]
         # X1 = embs['tgt'][:500, :]
-        W = train_supervision(X0, X1)
+        # W = train_supervision(X0, X1)
+        W = robust_procrustes(X0, X1)
 
-        # args.word_data = 'wiki'
         # word2ids, embs = prepare_embeddings(args.emb_type, args.langs, args.word_data, args.data_mode, args)
         # test_dico = load_test_dict(args, word2ids)
         for _ in range(15):  # refinement
             embs['src'] = embs['src'] @ W.T
-            scores = cal_similarity(args.sim_score, test_dico, embs, args.row_ranking) 
+            scores = cal_similarity(args.sim_score, test_dico, embs, args.emb_type, args.row_ranking) 
             inds = align_words(args.matching_method, test_dico, scores)
             # from IPython import embed; embed()
             X0 = embs['src'][inds[:, 0], :]
             X1 = embs['tgt'][inds[:, 1], :]
-            W = train_supervision(X0, X1)
+            # W = train_supervision(X0, X1)
+            W = robust_procrustes(X0, X1)
 
         embs['src'] = embs['src'] @ W.T
         
     elif args.method == 'supervised':
         # training
         word2ids, embs = prepare_embeddings(args.emb_type, args.langs, args.word_data, args.data_mode, args)
-        W = train_supervision(embs['src'], embs['tgt'])
+        n, m = embs['src'].shape[0], embs['tgt'].shape[0]
+        ind0 = np.arange(300).tolist() + np.random.randint(n, size=100).tolist()
+        ind1 = np.arange(300).tolist() + np.random.randint(m, size=100).tolist()
+        X0 = embs['src'][ind0, :]
+        X1 = embs['tgt'][ind1, :]
+        # W = train_supervision(X0, X1)
+        W = robust_procrustes(X0, X1)
         # args.word_data = 'wiki'
         # word2ids, embs = prepare_embeddings(args.emb_type, args.langs, args.word_data, args.data_mode, args)
         embs['src'] = embs['src'] @ W.T
+        test_dico = load_test_dict(args, word2ids)
     elif args.method == 'unsupervised':
         word2ids, embs = prepare_embeddings(args.emb_type, args.langs, args.word_data, args.data_mode, args)
+        dico = np.asarray([[i, i] for i in range(embs['src'].shape[0])])
+        test_dico = torch.from_numpy(dico).to(args.device)
 
     ##### Testing pairs  (subsets of dictionaries)
-    embs['src']= embs['src'].type(torch.FloatTensor).to(args.device)
-    test_dico = load_test_dict(args, word2ids)
+    # embs['src']= embs['src'].type(torch.FloatTensor).to(args.device)
+    # test_dico = load_test_dict(args, word2ids)
     print('\n..... Evaluating ..... ', args.word_data, args.emb_type, args.sim_score, args.matching_method)    
-    scores = cal_similarity(args.sim_score, test_dico, embs, args.row_ranking) 
+    scores = cal_similarity(args.sim_score, test_dico, embs, args.emb_type, args.row_ranking) 
     lst = align_words(args.matching_method, test_dico, scores)
     if args.save_lst:
         np.save(lst_path, lst)
-
+    
     ###============= Translation =============##########
     # decorrelate
     # if args.emb_type == 'cliptext':

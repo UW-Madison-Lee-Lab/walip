@@ -32,7 +32,7 @@ class ClipEmbedding():
             else:
                 print("No embedding exists!!!")
         ########### New Embeddings ############
-        print('.....', "New embedding", self.emb_path)
+        print('.....', "New embedding", get_basename(self.emb_path))
         if self.emb_type == configs.FASTTEXT:
             embs = np.load(self.emb_path, allow_pickle=True)
         else:
@@ -80,7 +80,7 @@ class ClipEmbedding():
         return img_embs
 
     def load_clip_txt_emb(self, vocabs=None):
-        txt_emb_pth = generate_path('emb_txt', {'lang': self.lang, 'word_data': self.opts.word_data, 'data_mode': self.data_mode})
+        txt_emb_pth = generate_path('emb_txt', {'lang': self.lang, 'src_lang': self.opts.src_lang, 'tgt_lang': self.opts.tgt_lang, 'word_data': self.opts.word_data, 'data_mode': self.data_mode})
         if self.opts.reuse_text_embedding and os.path.isfile(txt_emb_pth):
             print('.....', '.....', "Reuse txt emb", get_basename(txt_emb_pth))
             txt_embs = np.load(txt_emb_pth, allow_pickle=True)

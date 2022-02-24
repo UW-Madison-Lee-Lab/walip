@@ -18,12 +18,12 @@ import numpy as np
 #         f.write(f"{noun_vocabs['src'][i]} {noun_vocabs['tgt'][i]}\n")
 # f.close()
 # print('count:', count)
-langs = {'src': 'en', 'tgt': 'ru'}
-word_data = 'cifar100'
-data_mode = 'full'
-# vocabs = load_vocabs_from_pairs(langs, word_data, data_mode)
-# for l, lang in langs.items():
-#     write_vocabs(vocabs[l], langs[l], langs, word_data, data_mode)
-#     print('Done', lang)
+langs = {'src': 'it', 'tgt': 'en'}
+word_data = 'wiki'
+data_mode = 'test'
+vocabs = load_vocabs_from_pairs(langs, word_data, data_mode)
+for l, lang in langs.items():
+    write_vocabs(vocabs[l], langs[l], langs, word_data, data_mode)
+    print('Done', lang)
 
-combine_files(langs, word_data, data_mode)
+# combine_files(langs, word_data, data_mode)

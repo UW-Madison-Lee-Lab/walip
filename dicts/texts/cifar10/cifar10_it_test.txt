@@ -4,7 +4,7 @@ uccello
 gatto
 cervo
 cane
-rana
+ranocchio
 cavallo
 nave
-camion
+autocarro
