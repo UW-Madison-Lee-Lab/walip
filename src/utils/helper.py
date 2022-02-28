@@ -134,6 +134,9 @@ def generate_path(ftype, opts):
         elif ftype == 'emb_fasttext': # fasttext
             fdir = f'fasttext/{opts["word_data"]}/'
             fname = f'fasttext_{opts["word_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.npy'
+        elif ftype == 'emb_globetrotter': # globetrotter
+            fdir = f'globetrotter/{opts["word_data"]}/'
+            fname = f'globetrotter{opts["word_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.npy'
     elif ftype.startswith('img'):
         fdir = f'images/{opts["image_data"]}/'
         if ftype == 'img':

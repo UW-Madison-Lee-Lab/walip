@@ -35,6 +35,8 @@ class ClipEmbedding():
         print('.....', "New embedding", get_basename(self.emb_path))
         if self.emb_type == configs.FASTTEXT:
             embs = np.load(self.emb_path, allow_pickle=True)
+        elif self.emb_type == configs.GLOBETROTTER:
+            embs = np.load(self.emb_path, allow_pickle=True)
         else:
             txt_embs = self.load_clip_txt_emb(vocabs)
             if self.emb_type == configs.FINGERPRINT:
