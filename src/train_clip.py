@@ -8,7 +8,7 @@ from tclip.CLIP import CLIPModel
 from tclip.clip_ops import AverageMeter, evaluate_classification#, get_lr
 from tclip.inference import get_image_embeddings, find_matches
 from tclip.dataset import load_data, prepare_dataframe, build_loaders
-from models.ops import get_tokenizer
+from tclip.CLIP import get_tokenizer
 import configs
 
 import argparse

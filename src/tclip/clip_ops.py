@@ -138,11 +138,11 @@ def evaluate_multilabel_classification(image_data, lang, opts):
 
 
 
-# def evaluate_classification(image_data, lang, opts, model=None):
-#     if model is None:
-#         model_name = configs.model_names[lang]
-#         model, logit_scale, preprocess = load_models(lang, model_name, 'coco', opts.device, opts.large_model) 
-#     else:
-#         preprocess = None
-#     text_embeddings, dataloader = load_image_and_class(model, preprocess, image_data, lang, opts)
-#     validate(model, text_embeddings, dataloader, opts.device)
+def evaluate_classification(image_data, lang, opts, model=None):
+    if model is None:
+        model_name = configs.model_names[lang]
+        model, logit_scale, preprocess = load_models(lang, model_name, 'coco', opts.device, opts.large_model) 
+    else:
+        preprocess = None
+    text_embeddings, dataloader = load_image_and_class(model, preprocess, image_data, lang, opts)
+    validate(model, text_embeddings, dataloader, opts.device)
