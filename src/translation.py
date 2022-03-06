@@ -9,6 +9,7 @@ from utils.helper import get_accuracy, generate_path
 from utils.text_loader import combine_files
 from quad_ot.gmp import quadratic_assignment_ot
 import configs
+from scipy.stats import ortho_group
 
 
 
@@ -106,9 +107,12 @@ def robust_procrustes(X, Y):
     D = torch.eye(n).to(X.device)
     X1 = X
     Y1 = Y
-    for j in range(15):
+    for j in range(21):
         # e = ((Y1 - X1 @ W.T)**2).sum(dim=1)
         e = (torch.abs(Y1 - X1 @ W.T)).sum(dim=1)
+        if j % 20 == 0:
+            print('error at iteration {}: {}'.format(j, torch.norm(e)))
+
         alphas = 1/(e + 0.01)**2
         alphas = alphas / alphas.max()
         # t = torch.quantile(alphas, 0.2)
@@ -140,6 +144,34 @@ def robust_procrustes1(X, Y):
         W = U @ VT
         W = torch.Tensor(W).cuda()
     return W
+
+
+def robust_procrustes2(X, Y, W_ground=None):
+    import pdb 
+    n, k = X.shape
+    #W = W_ground
+    #W = train_supervision(X, Y)
+    W = torch.tensor(ortho_group.rvs(dim=k)).float().cuda() ## generate random W
+    D = torch.eye(n).to(X.device)
+    for i in range(1000):
+        e = Y - X @ W
+        if i % 20 == 0:
+            print('error at iteration {}: {}'.format(i, torch.norm(e)))
+        #print(e)
+        weights = 1/(torch.abs(e) + 0.01)
+        M = weights.max(dim=1, keepdim=True)[0]   
+        #pdb.set_trace()
+        for i in range(n):
+            D[i, i] = M[i, 0]
+        R = (1 - weights/M) * (X @ W) + (weights/M) * Y
+        S = X.T @ D @ R
+        U, Sigma, VT = scipy.linalg.svd(S.cpu().numpy(), full_matrices=True)
+        W = U @ VT
+        W = torch.Tensor(W).cuda()
+    return W
+
+
+
 
 def refinement(params, W, embs):
     # Get the best mapping according to VALIDATION_METRIC
