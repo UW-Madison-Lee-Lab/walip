@@ -5,17 +5,19 @@ import torch
 from transformers import logging
 
 from tclip.CLIP import CLIPModel
-from tclip.clip_ops import AverageMeter, evaluate_classification#, get_lr
+from tclip.clip_ops import AverageMeter, evaluate_classification# , get_lr
 from tclip.inference import get_image_embeddings, find_matches
-from tclip.dataset import load_data, prepare_dataframe, build_loaders
+from tclip.dataset import load_train_data, prepare_dataframe, build_loaders
 from tclip.CLIP import get_tokenizer
 import configs
 
 import argparse
 
+from utils.helper import get_lr
+
 logging.set_verbosity_warning()
 os.environ['TOKENIZERS_PARALLELISM'] = "false"
-
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # main
 parser = argparse.ArgumentParser(description='Training clip')
 parser.add_argument("--seed", type=int, default=-1, help="Initialization seed")
@@ -41,13 +43,13 @@ parser.add_argument("--max_length", type=int, default=200)
 parser.add_argument("--text_encoder_model", type=str, default="distilbert-base-uncased")
 parser.add_argument("--text_tokenizer", type=str, default="distilbert-base-uncased")
 
-parser.add_argument("--lang", type=str, default='en', help="Source language")
+parser.add_argument("--lang", type=str, default='es', help="Source language")
 parser.add_argument("--data", type=str, default='coco', help="Source language")
 parser.add_argument("--data_dir", type=str, default='../dataset', help="Source language")
 
 
 parser.add_argument("--resume", action='store_true')
-parser.add_argument("--is_train", action='store_true')
+parser.add_argument("--is_train", action='store_false')
 
 
 # parse parameters
@@ -55,21 +57,22 @@ params = parser.parse_args()
 
 
 params.model_name = configs.model_names[params.lang]
-params.image_path = f"{params.data_dir}/{params.data}/images/{configs.image_folders[params.lang]}"
+# params.image_path = f"{params.data_dir}/{params.data}/images/{configs.image_folders[params.lang]}"
+params.image_path = f'/nobackup/dataset_myf/COCO/train2014'
 params.captions_path = f"{params.data_dir}/{params.data}/captions/{params.lang}/{configs.caption_names[params.lang]}"
 params.image_prefix = configs.image_prefixes[params.lang]
 
-params.device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+params.device = torch.device('cuda:4') if torch.cuda.is_available() else torch.device('cpu')
 
 
 
 def train_epoch(model, tokenizier, train_loader, optimizer, lr_scheduler, step):
     loss_meter = AverageMeter()
     tqdm_object = tqdm(train_loader, total=len(train_loader))
-    for batch in tqdm_object:
+    for batch in tqdm_object: # batch.keys(): dict_keys(['image', 'caption'])
         text_tokens = tokenizer(batch['caption'], padding=True, truncation=True,max_length=params.max_length)
         batch['image'] = batch['image'].to(params.device)
-        for k, v in text_tokens.items():
+        for k, v in text_tokens.items():  # text_tokens.keys(): dict_keys(['input_ids', 'token_type_ids', 'attention_mask'])
             batch[k] = torch.tensor(v).to(params.device)
         loss = model(batch)
         optimizer.zero_grad()
@@ -117,7 +120,7 @@ def validate(model, tokenizer, params):
 def train(model, tokenizer, params):
     logf = open(f'../results/logs/{params.data}_{params.lang}.out', 'w')
     print("Training model")
-    train_loader, valid_loader = load_data(params)
+    train_loader  = load_train_data(params)
     # optimizer = torch.optim.AdamW(
         # model.parameters(), lr=params.lr, weight_decay=params.weight_decay
     # )
@@ -137,18 +140,19 @@ def train(model, tokenizer, params):
     for epoch in range(params.epochs):
         print(f"Epoch: {epoch + 1}")
         model.train()
-        train_loss = train_epoch(model, tokenizer, train_loader, optimizer, lr_scheduler, step)
-        model.eval()
-        with torch.no_grad():
-            valid_loss = valid_epoch(model, tokenizer, valid_loader)
-        
-        if valid_loss.avg < best_loss:
-            best_loss = valid_loss.avg
-            torch.save(model.state_dict(), params.model_path)
-            log_write(logf, "Saved Best Model!")
-        
-        log_write(logf, "epoch {} train_loss: {:.4f} val_loss: {:.4f}".format(epoch, train_loss.avg, valid_loss.avg))
+        train_loss = train_epoch(model, tokenizer, train_loader, optimizer, lr_scheduler, step)\
 
+        # model.eval()
+        # with torch.no_grad():
+        #     valid_loss = valid_epoch(model, tokenizer, valid_loader)
+        
+        # if valid_loss.avg < best_loss:
+        #     best_loss = valid_loss.avg
+        #     torch.save(model.state_dict(), params.model_path)
+        #     log_write(logf, "Saved Best Model!")
+        
+        #log_write(logf, "epoch {} train_loss: {:.4f} val_loss: {:.4f}".format(epoch, train_loss.avg, valid_loss.avg))
+    torch.save(model.state_dict(), params.model_path)
 def evaluate(model, tokenizer, params):
     model.eval()
     print("Evaluating classification!")
@@ -162,7 +166,8 @@ def inference(query, model, tokenizer, params):
 
     # image-path: eng
     params.lang = 'en'
-    params.image_path = f"{params.data_dir}/{params.data}/images/{configs.image_folders[params.lang]}"
+    params.image_path = f'/nobackup/COCO/COCO-14/train2014'
+    # params.image_path = f"{params.data_dir}/{params.data}/images/{configs.image_folders[params.lang]}"
     params.captions_path = f"{params.data_dir}/{params.data}/captions/{params.lang}/{configs.caption_names[params.lang]}"
     params.image_prefix = configs.image_prefixes[params.lang]
     # train_loader, valid_loader = load_data(params)
@@ -187,10 +192,12 @@ def inference(query, model, tokenizer, params):
 
 if __name__ == "__main__":
     print("Model on " + params.lang)
-    params.model_path = f"../results/clips/{params.data}/best_{params.lang}.pt"
+    params.model_path = f"/nobackup/checkpoint/{params.data}/best_{params.lang}.pt"
     tokenizer = get_tokenizer(params.lang, params.model_name) # will be trained?
 
     model = CLIPModel(params.lang, params.model_name, not params.resume, temperature=params.temperature).to(params.device)
+    # from torchsummary import summary
+    # summary(model, (1, 28, 28))
     if params.resume:
         model.load_state_dict(torch.load(params.model_path))
 

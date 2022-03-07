@@ -1,7 +1,8 @@
 model_names = {
     "en": "bert-base-uncased",
 	"en2": "bert-base-uncased",
-    "es": "../pretrained/uncased/",
+    #"es": "../pretrained/uncased/",
+	"es":"dccuchile/bert-base-spanish-wwm-uncased",
     "it": "dbmdz/bert-base-italian-uncased",
 	'ru': 'something',
 	'sw': 'something'
@@ -10,7 +11,8 @@ model_names = {
 image_folders = {
     "en": "train2014",
 	"en2": '',
-    "es": "spanish_images",
+    # "es": "spanish_images",
+	"es": "train2014",
     "it": "train2014",
 	"sw": '',
 	'ru': ''
@@ -19,14 +21,14 @@ image_folders = {
 image_prefixes = {
     'en': 'COCO_train2014_',
 	'en2': '',
-    'es': '',
+    'es': 'COCO_train2014_',
     'it': 'COCO_train2014_',
 	'sw': '',
 	'ru': ''
 }
 caption_names = {
     "en": "processed_captions_train2014.csv",
-    "es": "es/",
+    "es": "processed_captions_train2014.csv",
     "it": "processed_captions_train2014.csv",
 	"sw": ''
 }

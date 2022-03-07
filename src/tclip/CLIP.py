@@ -6,9 +6,9 @@ from tclip.modules import ImageEncoder_resnet, ImageEncoder_ViT, TextEncoder, Pr
 from transformers import BertTokenizer, AutoTokenizer
 
 def get_tokenizer(lang, model_name):
-    if lang in ['es', 'en']:
+    if lang == 'en':
         tokenizer = BertTokenizer.from_pretrained(model_name, do_lower_case=True)
-    elif lang == 'it':
+    elif lang in ['es', 'it']:
         tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=True)
     return tokenizer
 
@@ -30,7 +30,7 @@ class CLIPModel(nn.Module):
         pretrained=True,
         temperature=0.07,
         image_embedding=768,
-        text_embedding=768,
+        text_embedding=512,
         max_length=200,
         device='cuda'
     ):
@@ -41,8 +41,15 @@ class CLIPModel(nn.Module):
         #     self.image_encoder = ImageEncoder_resnet(pretrained=pretrained)
         # else:
         image_embedding=768
-        self.image_encoder = ImageEncoder_ViT(pretrained=pretrained)
-        self.text_encoder = TextEncoder(lang, model_name, pretrained=pretrained)
+        self.lang = lang
+        if self.lang == 'es':
+            from transformers import CLIPTextModel, CLIPVisionModel
+            self.image_encoder = CLIPVisionModel.from_pretrained("openai/clip-vit-base-patch32")
+            self.text_encoder = CLIPTextModel.from_pretrained("openai/clip-vit-base-patch32")
+        else: 
+            self.image_encoder = ImageEncoder_ViT(pretrained=pretrained)
+            # self.image_encoder = ImageEncoder_ViT(pretrained=pretrained)
+            self.text_encoder = TextEncoder(lang, model_name, pretrained=pretrained)
         # self.image_projection = nn.Linear(image_embedding, projection_dim)
         # self.text_projection = nn.Linear(text_embedding, projection_dim)
         self.image_projection = ProjectionHead(embedding_dim=image_embedding)
@@ -56,8 +63,15 @@ class CLIPModel(nn.Module):
 
     def get_embeddings(self, batch):
         # Getting Image and Text Features
-        image_features = self.image_encoder(batch["image"])
-        text_features = self.text_encoder(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"])
+        if self.lang == 'es':
+            image_features = self.image_encoder(batch["image"]).last_hidden_state[:, 0, :]
+            text_features = self.text_encoder(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"]).last_hidden_state[:, 0, :]
+        else: #'en'
+            image_features = self.image_encoder(batch["image"])
+            text_features = self.text_encoder(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"])
+
+        # image_features = self.image_encoder(batch["image"])
+        # text_features = self.text_encoder(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"])
         # Getting Image and Text Embeddings (with same dimension)
         # image_embeddings = F.normalize(self.image_projection(image_features), dim=1)
         # text_embeddings = F.normalize(self.text_projection(text_features), dim=1)
@@ -96,6 +110,7 @@ class CLIPModel(nn.Module):
         images_loss = cross_entropy(logits, targets, reduction='mean')
         loss =  (images_loss + texts_loss) / 2.0 # shape: (batch_size)
         return loss
+
 
     def encode_image(self, images):
         image_features = self.image_encoder(images)
