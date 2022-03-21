@@ -4,7 +4,8 @@ model_names = {
     "es": "../pretrained/uncased/",
     "it": "dbmdz/bert-base-italian-uncased",
 	'ru': 'something',
-	'sw': 'something'
+	'sw': 'something',
+	'ko': 'koclip-base'
 }
 
 image_folders = {

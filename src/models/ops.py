@@ -4,6 +4,7 @@ from tclip.CLIP import CLIPModel
 import numpy as np
 import clip
 import ruclip
+from koclip import load_koclip
 import torch.nn.functional as F
 from transformers import AutoTokenizer
 from typing import Any, Union, List
@@ -124,6 +125,35 @@ class ItalianClipObject():
         text_embeddings = self.clip_model.encode_text(text_tokens).type(torch.FloatTensor).to(self.device)
         return text_embeddings
 
+class KoreanClipObject():
+    def __init__(self, name="koclip-base", device="cuda") -> None:
+        self.clip_model, self.processor = load_koclip(name)
+        self.device = device
+    
+    def encode_image(self, imgs):
+        imgs = np.transpose(imgs.cpu().numpy(), (0, 2, 3, 1))
+        inputs = self.processor(
+        text=["hello"], # Can put any text because just looking at image embed
+        images=[img for img in imgs], 
+        return_tensors="jax",
+        padding=True
+    )
+
+        outputs = self.clip_model(**inputs)
+        return torch.FloatTensor(np.array(outputs['image_embeds'])).to(self.device)
+
+    def encode_text(self, txts):
+        inputs = self.processor(
+        text=txts,
+        images=np.zeros((10,10,3)), # Can put any image because just looking at text
+        return_tensors="jax",
+        padding=True
+        )   
+
+        outputs = self.clip_model(**inputs)
+        return torch.FloatTensor(np.array(outputs['text_embeds'])).to(self.device)
+
+        
 def load_models(lang, model_name, clip_data='coco', device='cuda', large_model=False):
     if not large_model:
         # load models
@@ -137,7 +167,7 @@ def load_models(lang, model_name, clip_data='coco', device='cuda', large_model=F
     else:
         # load models
         if lang == 'en':
-            model = EnglishClipObject()
+            model = EnglishClipObject(device=device)
             return model, model.logit_scale, model.preprocess
         elif lang == 'en2':
             model = EnglishClipObject(name='RN50x4')
@@ -164,5 +194,8 @@ def load_models(lang, model_name, clip_data='coco', device='cuda', large_model=F
             model = RuClipObject(name='ruclip-vit-base-patch32-224')
             # model = EnglishClipObject()
             return model, model.logit_scale, model.preprocess
+        elif lang == 'ko':
+            model = KoreanClipObject(name="koclip-base")
+            return model, 1.0, None
 
         return clip_model, logit_scale, preprocess

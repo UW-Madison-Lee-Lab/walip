@@ -425,6 +425,10 @@ prompts = {
             "en {} i ett videospel.",
             "konst av {}.",
             "ett foto på den lilla {}."
+        ],
+        'ko': [
+            "{} 사진",
+            "{}"
         ]
     },
     'imagenet_r': {

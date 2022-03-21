@@ -35,7 +35,7 @@ class ClipEmbedding():
         print('.....', "New embedding", get_basename(self.emb_path))
         if self.emb_type == configs.FASTTEXT:
             embs = np.load(self.emb_path, allow_pickle=True)
-        elif self.emb_type == configs.GLOBETROTTER:
+        elif self.emb_type == "globetrotter":
             embs = np.load(self.emb_path, allow_pickle=True)
         else:
             txt_embs = self.load_clip_txt_emb(vocabs)
@@ -63,7 +63,7 @@ class ClipEmbedding():
                 print('.....', '.....', '.....', "Reuse img data") 
                 images = np.load(img_pth, allow_pickle=True)
             else:
-                print('.....', '.....', '.....', "New img data") 
+                print('.....', '.....', '.....', "New img data")
                 images = load_image_data(self.opts.image_data, self.opts.num_images, self.opts.using_filtered_images, self.opts.src_lang, self.opts.tgt_lang, self.preprocess)
                 np.save(img_pth, images)
             images = torch.Tensor(images)
