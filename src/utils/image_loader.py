@@ -70,7 +70,7 @@ def get_first_label(label):
     return indices[0]
 
 
-def load_image_dataset(image_name, data_dir='../dataset', preprocess=None, multilabel=False):
+def load_image_dataset(image_name, data_dir='../datasets', preprocess=None, multilabel=False):
     print('.....', '.....', '.....', "Load image dataset ", image_name)
     if image_name.startswith('cifar'):
         if image_name == 'cifar100':
@@ -104,7 +104,7 @@ def load_image_data(image_name, num_images, using_filtered_images, src_lang, tgt
 
     if image_name == 'coco':
         # Expected to have image_id, and labels columns
-        captions_path = f"../dataset/coco/captions/en/{configs.caption_names['en']}"
+        captions_path = f"../datasets/coco/captions/en/{configs.caption_names['en']}"
         df = pd.read_csv(f"{captions_path}")
         image_ids = df["image_id"].values
         if multilabel:
@@ -118,7 +118,7 @@ def load_image_data(image_name, num_images, using_filtered_images, src_lang, tgt
         image_ids = image_ids[indices]
         final_labels = labels[indices]
 
-        image_path = f"../dataset/coco/images/{configs.image_folders['en']}"
+        image_path = f"../datasets/coco/images/{configs.image_folders['en']}"
         image_filenames = [f"{image_path}/{configs.image_prefixes['en']}{str(image_ids[i]).zfill(12)}.jpg" for i in range(len(image_ids))] 
         images = image_filenames
         return images[:num_images], final_labels[:num_images]
@@ -153,9 +153,6 @@ def load_image_data(image_name, num_images, using_filtered_images, src_lang, tgt
     for c in range(num_classes):
         indices = np.argwhere(labels == c)
         # np.random.shuffle(indices)
-        if len(indices) == 0:
-            print("Class {} has no examples, skipping ...".format(c))
-            continue
         images += [image_dataset[indices[i][0]][0] for i in range(num_images)]
     images = np.stack(images, axis=0)
     return images

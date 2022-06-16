@@ -1,0 +1,94 @@
+{
+    "en": {
+        "large_model": true,
+        "num_prompts": 7,
+        "reuse_emb": 0,
+        "reuse_txt_emb": 0,
+        "reuse_img_emb": 0
+    },
+    "ru": {
+        "large_model": true,
+        "num_prompts": 4,
+        "reuse_emb": 1,
+        "reuse_txt_emb": 1,
+        "reuse_img_emb": 1
+    },
+    "ru2": {
+        "large_model": true,
+        "num_prompts": 4,
+        "reuse_emb": 0,
+        "reuse_txt_emb": 0,
+        "reuse_img_emb": 1
+    },
+    "it": {
+        "large_model": true,
+        "num_prompts": 7,
+        "reuse_emb": 1,
+        "reuse_txt_emb": 1,
+        "reuse_img_emb": 1
+    },
+    "it2": {
+        "large_model": true,
+        "num_prompts": 7,
+        "reuse_emb": 1,
+        "reuse_txt_emb": 1,
+        "reuse_img_emb": 1
+    },
+    "de": {
+        "large_model": true,
+        "num_prompts": 7,
+        "reuse_emb": 1,
+        "reuse_txt_emb": 1,
+        "reuse_img_emb": 1
+    },
+    "de2": {
+        "large_model": true,
+        "num_prompts": 7,
+        "reuse_emb": 1,
+        "reuse_txt_emb": 1,
+        "reuse_img_emb": 1
+    },
+    "es": {
+        "large_model": true,
+        "num_prompts": 7,
+        "reuse_emb": 1,
+        "reuse_txt_emb": 1,
+        "reuse_img_emb": 1
+    },
+    "es2": {
+        "large_model": true,
+        "num_prompts": 7,
+        "reuse_emb": 1,
+        "reuse_txt_emb": 1,
+        "reuse_img_emb": 1
+    },
+    "fr": {
+        "large_model": true,
+        "num_prompts": 7,
+        "reuse_emb": 0,
+        "reuse_txt_emb": 0,
+        "reuse_img_emb": 0
+    },
+    "ja": {
+        "large_model": true,
+        "num_prompts": 2,
+        "reuse_emb": 0,
+        "reuse_txt_emb": 0,
+        "reuse_img_emb": 0
+    },
+    "ko": {
+        "large_model": true,
+        "num_prompts": 15,
+        "reuse_emb": 0,
+        "reuse_txt_emb": 0,
+        "reuse_img_emb": 0
+    },
+    "ko2": {
+        "large_model": true,
+        "num_prompts": 15,
+        "reuse_emb": 1,
+        "reuse_txt_emb": 1,
+        "reuse_img_emb": 1
+    }
+}
+  

@@ -14,8 +14,8 @@ from tqdm import tqdm
 import numpy as np
 
 
-def load_label_embs(model, lang, word_data, data_mode, num_prompts):
-    vocab = load_vocabs(lang, word_data, data_mode)
+def load_label_embs(model, lang, langs, word_data, data_mode, num_prompts):
+    vocab = load_vocabs(lang, langs, word_data, data_mode)
     texts = generate_texts(prompts[word_data][lang], vocab, k=num_prompts)
     K = num_prompts
     text_embeddings = []
@@ -38,11 +38,11 @@ def load_label_embs(model, lang, word_data, data_mode, num_prompts):
 #     return text_embeddings, dataloader
 
 
-def zero_shot_classification(model, image_data, word_data, lang, num_prompts, logit_scale, preprocess=None, device='cuda', test_perclass=False):
-    label_embeddings = load_label_embs(model, lang, word_data, data_mode, num_prompts)
+def zero_shot_classification(opts, model, image_data, word_data, lang, logit_scale, preprocess=None):
+    label_embeddings = load_label_embs(model, lang, opts.langs, word_data, opts.data_mode, opts.num_prompts)
     image_dataset = load_image_dataset(image_data, preprocess=preprocess)
     s, scores, batch_size = 0, [], 64
-    if test_perclass:
+    if False: # per class test
         num_classes = configs.num_classes[image_data]
         for c in range(num_classes):
             indices = np.argwhere(np.asarray(image_dataset.targets) == c)
@@ -50,7 +50,7 @@ def zero_shot_classification(model, image_data, word_data, lang, num_prompts, lo
             data = Subset(image_dataset, indices.tolist())
             dataloader = DataLoader(data, batch_size=batch_size, shuffle=False, drop_last=True, num_workers=4)
             print("Class ", c)
-            top1, top5 = validate(model, label_embeddings, dataloader, device, logit_scale)
+            top1, top5 = validate(model, label_embeddings, dataloader, opts.device, logit_scale)
             s += top1
             scores.append(top1)
         print('ACC: ', s/num_classes)
@@ -58,7 +58,7 @@ def zero_shot_classification(model, image_data, word_data, lang, num_prompts, lo
             print(scores[i])
     else:
         dataloader = DataLoader(image_dataset, batch_size=batch_size, shuffle=False, drop_last=True, num_workers=4)
-        top1, top5 = validate(model, text_embeddings, dataloader, device, logit_scale)
+        top1, top5 = validate(model, label_embeddings, dataloader, opts.device, logit_scale)
     
 def validate(model, text_embeddings, dataloader, device, logit_scale=1.0):
     text_embeddings = text_embeddings.type(torch.FloatTensor).to(device)

@@ -1,58 +1,14 @@
 # from this import d
-import torch
-from tclip.CLIP import CLIPModel
 import numpy as np
+import torch
+from tclip.CLIP import CLIPModel as TClip
+from transformers import CLIPModel, CLIPTokenizer
 import clip
 import ruclip
-from koclip import load_koclip
-import torch.nn.functional as F
-from transformers import AutoTokenizer
-from typing import Any, Union, List
-from tclip.simple_tokenizer import SimpleTokenizer as _Tokenizer
-from torch.nn.utils.rnn import pad_sequence
-
-def italian_tokenize(_tokenizer, tokenizer, texts: Union[str, List[str]], context_length: int = 77, truncate: bool = False) -> torch.LongTensor:
-    """
-    Returns the tokenized representation of given input string(s)
-
-    Parameters
-    ----------
-    texts : Union[str, List[str]]
-        An input string or a list of input strings to tokenize
-
-    context_length : int
-        The context length to use; all CLIP models use 77 as the context length
-
-    truncate: bool
-        Whether to truncate the text in case its encoding is longer than the context length
-
-    Returns
-    -------
-    A two-dimensional tensor containing the resulting tokens, shape = [number of input strings, context_length]
-    """
-    if isinstance(texts, str):
-        texts = [texts]
-
-    sot_token = _tokenizer.encoder["<|startoftext|>"]
-    eot_token = _tokenizer.encoder["<|endoftext|>"]
-    all_tokens = [[sot_token] + tokenizer.encode(text) + [eot_token] for text in texts]
-    result = torch.zeros(len(all_tokens), context_length, dtype=torch.long)
-
-    for i, tokens in enumerate(all_tokens):
-        if len(tokens) > context_length:
-            if truncate:
-                tokens = tokens[:context_length]
-                tokens[-1] = eot_token
-            else:
-                raise RuntimeError(f"Input {texts[i]} is too long for context length {context_length}")
-        result[i, :len(tokens)] = torch.tensor(tokens)
-
-    return result
-
-
+from torchvision import transforms
 
 class ClipObject():
-    def __init__(self, text_model, image_model, italian=False, device='cuda'):
+    def __init__(self, text_model, image_model, italian=False, device='cuda:0'):
         self.text_model = text_model
         self.image_model = image_model
         self.italian = italian
@@ -75,7 +31,7 @@ class ClipObject():
         return image_features
 
 class EnglishClipObject():
-    def __init__(self, name="ViT-B/32", device="cuda") -> None:
+    def __init__(self, name="ViT-B/32", device="cuda:0") -> None:
         self.clip_model, self.preprocess = clip.load(name)
         self.clip_model = self.clip_model.to(device).eval()
         self.logit_scale = self.clip_model.logit_scale.exp().float()
@@ -89,8 +45,40 @@ class EnglishClipObject():
         text_embeddings = self.clip_model.encode_text(text_tokens).type(torch.FloatTensor).to(self.device)
         return text_embeddings
 
+
+class HClipObject():
+    def __init__(self, name="ViT-B/32", device="cuda:0") -> None:
+        ckpt_mapping = {"ViT-B/16":"openai/clip-vit-base-patch16", 
+                    "ViT-B/32":"openai/clip-vit-base-patch32",
+                    "ViT-L/14":"openai/clip-vit-large-patch14",
+                    "ViT-L/16":"openai/clip-vit-large-patch16"}
+        self.clip_model =  CLIPModel.from_pretrained(ckpt_mapping[name]).to(device)
+        self.tokenizer = CLIPTokenizer.from_pretrained(ckpt_mapping[name])
+        self.device = device
+
+        normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406), 
+                                            std=(0.229, 0.224, 0.225)) 
+
+        self.preprocess = transforms.Compose([
+                transforms.Resize(224),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                normalize
+        ])
+        self.logit_scale = self.clip_model.logit_scale.exp().float()
+
+    def encode_image(self, imgs):
+        return self.clip_model.get_image_features(pixel_values = imgs).float().to(self.device)
+
+    def encode_text(self, txts):
+        text_inputs = self.tokenizer(txts, padding=True, return_tensors="pt")
+        # text_inputs = clip.tokenize(txts).to(self.device)
+        text_embeddings =  self.clip_model.get_text_features(input_ids = text_inputs['input_ids'].to(self.device),  attention_mask = text_inputs['attention_mask'].to(self.device)).float()
+
+        return text_embeddings
+
 class RuClipObject():
-    def __init__(self, name='ruclip-vit-base-patch32-384', device="cuda") -> None:
+    def __init__(self, name='ruclip-vit-base-patch32-384', device="cuda:0") -> None:
         self.clip_model, self.clip_processor = ruclip.load(name, device=device)
         self.clip_model = self.clip_model.to(device).eval()
         self.logit_scale = self.clip_model.logit_scale.exp().float()
@@ -108,94 +96,114 @@ class RuClipObject():
         # .type(torch.FloatTensor)
         return text_embeddings
 
-class ItalianClipObject():
-    def __init__(self, name="ViT-B/32", device="cuda") -> None:
-        self.clip_model, self.preprocess = clip.load(name)
-        self.clip_model = self.clip_model.to(device).eval()
-        self.logit_scale = self.clip_model.logit_scale.exp().float()
+class JapaneseClipObject():
+    def __init__(self, model, preprocess, jaclip=None, device="cuda:0") -> None:
+        self.model = model
         self.device = device
-        self._tokenizer = _Tokenizer()
-        self.tokenizer = AutoTokenizer.from_pretrained("GroNLP/gpt2-small-italian")
-    
-    def encode_image(self, imgs):
-        return self.clip_model.encode_image(imgs).type(torch.FloatTensor).to(self.device)
+        self.ja_clip = jaclip
+        self.logit_scale = np.exp(0.07)
+        self.preprocess = preprocess
+        self.tokenizer = self.ja_clip.load_tokenizer()
 
+    def encode_image(self, imgs):
+        print(f"Images have the shape {imgs.shape} with type {type(imgs)}")
+        i_emb = self.model.get_image_features(pixel_values=imgs)
+        return i_emb.type(torch.FloatTensor).to(self.device)
+    
     def encode_text(self, txts):
-        text_tokens = italian_tokenize(self._tokenizer, self.tokenizer, txts).to(self.device)
-        text_embeddings = self.clip_model.encode_text(text_tokens).type(torch.FloatTensor).to(self.device)
-        return text_embeddings
+        encodings = self.ja_clip.tokenize(
+          texts=txts,
+          max_seq_len=77,
+          device=self.device,
+          tokenizer=self.tokenizer, # this is optional. if you don't pass, load tokenizer each time
+        )
+        txt_emb = self.model.get_text_features(**encodings)
+        return txt_emb.to(self.device)
 
 class KoreanClipObject():
-    def __init__(self, name="koclip-base", device="cuda") -> None:
-        self.clip_model, self.processor = load_koclip(name)
+    def __init__(self, model, processor, device="cuda:0") -> None:
+        self.model = model
+        self.processor = processor
         self.device = device
+        self.logit_scale = np.exp(0.07)
+        self.preprocess = None
     
     def encode_image(self, imgs):
-        imgs = np.transpose(imgs.cpu().numpy(), (0, 2, 3, 1))
-        inputs = self.processor(
-        text=["hello"], # Can put any text because just looking at image embed
-        images=[img for img in imgs], 
-        return_tensors="jax",
-        padding=True
-    )
-
-        outputs = self.clip_model(**inputs)
-        return torch.FloatTensor(np.array(outputs['image_embeds'])).to(self.device)
+        images_c = np.transpose(imgs.cpu().numpy(), (0, 2, 3, 1))
+        img_emb = self.model.get_image_features(pixel_values=images_c)
+        return torch.from_numpy(np.asarray(img_emb)).type(torch.FloatTensor).to(self.device)
 
     def encode_text(self, txts):
         inputs = self.processor(
-        text=txts,
-        images=np.zeros((10,10,3)), # Can put any image because just looking at text
-        return_tensors="jax",
-        padding=True
-        )   
+            text=txts,
+            return_tensors="jax", # could also be "pt" 
+            padding=True
+        )
+        txt_emb = self.model.get_text_features(inputs['input_ids'],
+        attention_mask=inputs['attention_mask'],
+        token_type_ids=inputs['token_type_ids'])
+        return torch.from_numpy(np.asarray(txt_emb)).to(self.device)
 
-        outputs = self.clip_model(**inputs)
-        return torch.FloatTensor(np.array(outputs['text_embeds'])).to(self.device)
 
-        
-def load_models(lang, model_name, clip_data='coco', device='cuda', large_model=False):
-    if not large_model:
+
+
+def load_models(lang, device='cuda:0', large_model=False, model_dir='../results/clips'):
+    if large_model:
         # load models
-        model = CLIPModel(lang, model_name, pretrained=False, temperature=0.07, device=device)
-        model = model.to(device)
-        model_path = f'../results/clips/{clip_data}/best_{lang}.pt'
+        if lang == 'en' or '2' in lang:
+            model = EnglishClipObject(device=device)
+        elif lang == 'ru':
+            model = RuClipObject(name='ruclip-vit-base-patch32-224', device=device)
+        elif lang == 'ja':
+            import japanese_clip as ja_clip
+            m, preprocess = ja_clip.load("rinna/japanese-clip-vit-b-16", cache_dir="/tmp/japanese_clip", device=device)
+            model = JapaneseClipObject(m, preprocess, jaclip = ja_clip ,device=device)
+        elif lang == 'ko':
+            from models.koclip.koclip import load_koclip
+            ko_model, processor = load_koclip("koclip-large")
+            model = KoreanClipObject(ko_model, processor, device=device)
+        elif lang in ['de', 'es', 'fr']:
+            name = 'ViT-B/16' if lang == 'fr' else 'ViT-B/32'
+            model = HClipObject(device=device, name=name)
+            finetune_ckpt = f'{model_dir}/best_{lang}.pt'
+            model.clip_model.load_state_dict(torch.load(finetune_ckpt, map_location=device))
+        else: # italian --- reverse
+            model = EnglishClipObject(name=f'{model_dir}/best_{lang}.pt', device=device)
+        return model, model.logit_scale, model.preprocess
+    else:
+         # load models
+        model_name = None
+        model = TClip(lang, model_name, pretrained=False, temperature=0.07, device=device)
+        model_path = f'{model_dir}/{clip_data}/best_{lang}.pt'
         model.load_state_dict(torch.load(model_path))
         model.eval()
         logit_scale = np.exp(model.temperature)
         return model, logit_scale, None
-    else:
-        # load models
-        if lang == 'en':
-            model = EnglishClipObject(device=device)
-            return model, model.logit_scale, model.preprocess
-        elif lang == 'en2':
-            model = EnglishClipObject(name='RN50x4')
-            return model, model.logit_scale, model.preprocess
-        elif lang == 'sw':
-            from mclip import multilingual_clip
-            text_model = multilingual_clip.load_model('Swe-CLIP-2M')
-            # text_model = multilingual_clip.load_model('M-BERT-Distil-40')
-            img_model, preprocess = clip.load('RN50x4')
-            text_model = text_model.eval()
-            img_model = img_model.to(device).eval()
-            logit_scale = img_model.logit_scale.exp().float()
-            clip_model = ClipObject(text_model, img_model, device=device)
-        elif lang == 'it': # italian
-            model = EnglishClipObject(name='../results/clips/wtm/it.pt')
-            # model = EnglishClipObject()
-            return model, model.logit_scale, model.preprocess
-            preprocess = None
-            from models.clip_italian import get_italian_models
-            img_model, text_model = get_italian_models()
-            clip_model = ClipObject(text_model, img_model, italian=True, device=device)
-            logit_scale = 20.0
-        elif lang == 'ru':
-            model = RuClipObject(name='ruclip-vit-base-patch32-224')
-            # model = EnglishClipObject()
-            return model, model.logit_scale, model.preprocess
-        elif lang == 'ko':
-            model = KoreanClipObject(name="koclip-base")
-            return model, 1.0, None
 
-        return clip_model, logit_scale, preprocess
+
+
+#####
+# elif lang == 'sw':
+#     from mclip import multilingual_clip
+#     text_model = multilingual_clip.load_model('Swe-CLIP-2M')
+#     # text_model = multilingual_clip.load_model('M-BERT-Distil-40')
+#     img_model, preprocess = clip.load('RN50x4')
+#     text_model = text_model.eval()
+#     img_model = img_model.to(device).eval()
+#     logit_scale = img_model.logit_scale.exp().float()
+#     clip_model = ClipObject(text_model, img_model, device=device)
+# elif lang == 'it':
+#     preprocess = None
+#         from models.clip_italian import get_italian_models
+#         img_model, text_model = get_italian_models()
+#         clip_model = ClipObject(text_model, img_model, italian=True, device=device)
+#         logit_scale = 20.0
+# M-CLIP: from mclip import multilingual_clip
+# text_model = multilingual_clip.load_model('M-BERT-Distil-40')
+#             img_model, preprocess = clip.load('RN50x4')
+#             text_model = text_model.eval()
+#             img_model = img_model.to(device).eval()
+#             logit_scale = img_model.logit_scale.exp().float()
+#             clip_model = ClipObject(text_model, img_model, device=device)
+#             preprocess = None
+####

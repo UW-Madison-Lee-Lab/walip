@@ -3,6 +3,17 @@ import os
 from itertools import chain
 from torchvision.utils import save_image
 
+def check_noun(vocabs):
+    import spacy
+    nlp = spacy.load("en_core_web_sm")
+    count = 0
+    for w in vocabs:
+        doc = nlp(w)
+        if doc[0].pos_ == 'NOUN':
+            count += 1
+    print('Nouns: ', count/len(vocabs))
+    
+
 def plotW(score, name):
     plt.imshow(score)
     plt.colorbar()
@@ -130,23 +141,27 @@ def generate_path(ftype, opts):
         elif ftype == 'emb_fp':
             prefix = f'{opts["image_data"]}_{s}_{opts["word_data"]}'
             fdir = f'fp/{prefix}/'
-            fname = f'fp_{prefix}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.npy'
+            fname = f'fp_{prefix}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}_k{opts["num_images"]}.npy'
         elif ftype == 'emb_fasttext': # fasttext
             fdir = f'fasttext/{opts["word_data"]}/'
             fname = f'fasttext_{opts["word_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.npy'
-        elif ftype == 'emb_globetrotter': # globetrotter
-            fdir = f'globetrotter/{opts["word_data"]}/'
-            fname = f'globetrotter{opts["word_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.npy'
+        elif ftype == 'emb_htw': # fasttext
+            fdir = f'htw/{opts["word_data"]}/'
+            fname = f'htw_{opts["word_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.npy'
+        elif ftype == 'emb_globe': # globe
+            fdir = f'globe/{opts["word_data"]}/'
+            fname = f'globe_{opts["word_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.npy'
     elif ftype.startswith('img'):
         fdir = f'images/{opts["image_data"]}/'
         if ftype == 'img':
-            fname = f'img_{opts["image_data"]}_{opts["lang"]}_k{opts["num_images"]}_{s}.npy'
+            fname = f'img_{opts["image_data"]}_k{opts["num_images"]}_{s}.npy'
         elif ftype == 'img_label':
             fname = f'label_{opts["image_data"]}.npy'
         elif ftype == 'img_index':
             fname = f'index_{opts["image_data"]}_{opts["lang"]}.npy'
         elif ftype == 'img_shared_index':
-            fname = f'shared_index_{opts["image_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}.npy'
+            # fname = f'shared_index_{opts["image_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}.npy'
+            fname = f'shared_index_{opts["image_data"]}.npy'
     elif ftype == 'txt_single':
         fdir = f'texts/{opts["word_data"]}/'
         fname = f'{opts["word_data"]}_{opts["src_lang"]}_{opts["tgt_lang"]}_{opts["lang"]}_{opts["data_mode"]}.txt'

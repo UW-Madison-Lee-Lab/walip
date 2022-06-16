@@ -4,8 +4,12 @@ model_names = {
     "es": "../pretrained/uncased/",
     "it": "dbmdz/bert-base-italian-uncased",
 	'ru': 'something',
-	'sw': 'something',
-	'ko': 'koclip-base'
+	'ru2': 'something',
+	'fr': 'something', 
+	'ko': 'something',
+	'de': 'seeeee',
+	'de2': 'seeeee',
+	'es2': 'seeeee',
 }
 
 image_folders = {
@@ -13,8 +17,13 @@ image_folders = {
 	"en2": '',
     "es": "spanish_images",
     "it": "train2014",
-	"sw": '',
-	'ru': ''
+	"fr": '',
+	'ru': '',
+	'ru2': '',
+	'ko': '',
+	'ko2': '',
+	'de': 'seeeee',
+	'de2': 'seeeee'
 }
 
 image_prefixes = {
@@ -22,14 +31,20 @@ image_prefixes = {
 	'en2': '',
     'es': '',
     'it': 'COCO_train2014_',
-	'sw': '',
-	'ru': ''
+	'fr': '',
+	'ru': '',
+	'ko': '',
+	'de': 'seeeee',
+	'de2': 'seeeee',
 }
 caption_names = {
     "en": "processed_captions_train2014.csv",
     "es": "es/",
     "it": "processed_captions_train2014.csv",
-	"sw": ''
+	"fr": '',
+	'ko': '',
+	'de': 'seeeee',
+	'de2': 'seeeee',
 }
 
 
@@ -68,8 +83,10 @@ delimiters = {
 	'imagenet-r': ' | ',
 	'composite': ' | ',
 	'wiki': ' ', 
+        'wikifiltered': ' ',
 	'coco': ' ',
-	'wiki_noun': ' '
+	'wiki_noun': ' ',
+        'simple_word': ' '
 }
 
 image_batchsizes = {'imagenet':4, 'cifar100': 128, 'cifar10':128}
@@ -80,5 +97,7 @@ FINGERPRINT = 'fp'
 FASTTEXT = 'fasttext'
 GANFASTTEXT = 'ganfasttext200'
 CLIPTEXT = 'cliptext'
+GLOBE = 'globe'
+HTW = 'htw'
 
 

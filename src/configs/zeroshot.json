@@ -1,0 +1,6 @@
+{
+    "emb_type": "fasttext",
+    "work_mode": "translation",
+    "method": "zeroshot",
+    "pretrained": "en_it"
+}

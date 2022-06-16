@@ -1,0 +1,33 @@
+{
+    "words":{ 
+      "word_data" : "wiki",
+      "data_mode" : "test"
+    },
+    "images": {
+      "image_data": "imagenet",
+      "num_images": 3,
+      "using_filtered_images": false,
+      "reuse_image_data": 0
+    },
+  
+    "model":{ 
+      "sim_score": "csls",
+      "matching_method": "nn"
+    },
+  
+    "setting": {
+      "batch_size": 64,
+      "dict_pth": "../dicts/",
+      "seed": -1,
+      "verbose": 2,
+      "num_workers": 2,
+      "dico_eval": "default",
+      "dico_method": "csls_knn_10",
+      "dico_build": "S2T",
+      "dico_threshold": 0,
+      "dico_max_rank": 15000,
+      "dico_min_size": 0,
+      "dico_max_size": 0
+    }
+  }
+  

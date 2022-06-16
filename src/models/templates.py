@@ -194,7 +194,16 @@ prompts = {
             'на картинке {}', 
             'это {}, домашнее животное'
         ],
-
+        'ko': ['{} 나쁜 사진',
+            '많은 {} 사진',
+            '{} 조각상',
+            '보기 힘든 {} 사진',
+            '{} 저해상도 사진',
+            '{} 렌더링',
+            '{} 낙서',
+            '{} 나쁜 사진',
+            '{} 자른 사진',
+            '{} 문신'],
         'en2': [
             'a photo of a {}.',
             'a blurry photo of a {}.',
@@ -369,7 +378,7 @@ prompts = {
         ]
     },
     'imagenet': {
-        'en': [
+        'en-4': [
             '{}',
              'this {}',
              'on the picture {}',
@@ -381,7 +390,69 @@ prompts = {
             'на картинке {}', 
             'это {}, домашнее животное'
         ],
-        'en1': [
+        'ru2': [
+            '{}', 
+            'это {}', 
+            'на картинке {}', 
+            'это {}, домашнее животное'
+        ],
+         'fr': [
+            "clic d'un {}.",
+            "une mauvaise photo du {}.",
+            "un origami {}.",
+            "une photo du grand {}.",
+            "un {} dans un jeu vidéo.",
+            "l'art du {}.",
+            "une photo du petit {}."
+        ],
+        'ko': [
+            '{}의 사진.',
+             '{}의 흐릿한 사진.',
+             '{}의 흑백 사진.',
+             '{}의 저대비 사진.',
+             '{}의 고대비 사진.',
+             '{}의 잘못된 사진.',
+             '{}의 좋은 사진.',
+             '작은 {}의 사진.',
+             '큰 {}의 사진.',
+             '{}의 사진.',
+             '{}의 흐릿한 사진.',
+             '{}의 흑백 사진.',
+             '{}의 저대비 사진.',
+             '{}의 고대비 사진.',
+             '{}의 잘못된 사진.',
+             '{}의 좋은 사진.',
+             '작은 {}의 사진.',
+             '큰 {}의 사진.',
+        ],
+        'ko2': [
+            '{}의 사진.',
+             '{}의 흐릿한 사진.',
+             '{}의 흑백 사진.',
+             '{}의 저대비 사진.',
+             '{}의 고대비 사진.',
+             '{}의 잘못된 사진.',
+             '{}의 좋은 사진.',
+             '작은 {}의 사진.',
+             '큰 {}의 사진.',
+             '{}의 사진.',
+             '{}의 흐릿한 사진.',
+             '{}의 흑백 사진.',
+             '{}의 저대비 사진.',
+             '{}의 고대비 사진.',
+             '{}의 잘못된 사진.',
+             '{}의 좋은 사진.',
+             '작은 {}의 사진.',
+             '큰 {}의 사진.',
+        ],
+        'ko-0': ["{}의 itap.",
+             "{}의 잘못된 사진.",
+             "종이 접기 {}.",
+             "큰 {}의 사진.",
+             "비디오 게임의 {}.",
+             "{}의 예술.",
+             "작은 {}의 사진."],
+        'en-7': [
             "itap of a {}.",
             "a bad photo of the {}.",
             "a origami {}.",
@@ -390,7 +461,63 @@ prompts = {
             "art of the {}.",
             "a photo of the small {}."
         ],
-        'en2': [
+        'es':[
+             "tap de un {}.",
+             "una mala foto del {}.",
+             "un origami {}.",
+             "una foto del gran {}.",
+             "un {} en un videojuego.",
+             "arte de {}.",
+             "una foto de la pequeña {}."
+         ],
+         'es2': [
+             "tap de un {}.",
+             "una mala foto del {}.",
+             "un origami {}.",
+             "una foto del gran {}.",
+             "un {} en un videojuego.",
+             "arte de {}.",
+             "una foto de la pequeña {}."
+         ],
+        'de': [
+             "tippen auf ein {}.",
+             "ein schlechtes Foto von {}.",
+             "ein Origami {}.",
+             "ein Foto des großen {}.",
+             "ein {} in einem Videospiel.",
+             "kunst der {}.",
+             "ein Foto des kleinen {}."
+         ],
+         'de2': [
+             "tippen auf ein {}.",
+             "ein schlechtes Foto von {}.",
+             "ein Origami {}.",
+             "ein Foto des großen {}.",
+             "ein {} in einem Videospiel.",
+             "kunst der {}.",
+             "ein Foto des kleinen {}."
+         ],
+        'en-15': [
+              'a photo of a {}.',
+            'a blurry photo of a {}.',
+            'a black and white photo of a {}.',
+            'a low contrast photo of a {}.',
+            'a high contrast photo of a {}.',
+            'a bad photo of a {}.',
+            'a good photo of a {}.',
+            'a photo of a small {}.',
+            'a photo of a big {}.',
+            'a photo of the {}.',
+            'a blurry photo of the {}.',
+            'a black and white photo of the {}.',
+            'a low contrast photo of the {}.',
+            'a high contrast photo of the {}.',
+            'a bad photo of the {}.',
+            'a good photo of the {}.',
+            'a photo of the small {}.',
+            'a photo of the big {}.',
+        ],
+        'en': [
             "itap of a {}.",
             "a bad photo of the {}.",
             "a origami {}.",
@@ -417,6 +544,15 @@ prompts = {
             "arte del {}.",
             "una foto del piccolo {}."
         ],
+        'it2': [
+            "itap di un {}.",
+            "una brutta foto del {}.",
+            "un origami {}.",
+            "una foto del grande {}.",
+            "a {} in un videogioco.",
+            "arte del {}.",
+            "una foto del piccolo {}."
+        ],
         'sw': [
             "tap på en {}.",
             "ett dåligt foto av {}.",
@@ -426,9 +562,9 @@ prompts = {
             "konst av {}.",
             "ett foto på den lilla {}."
         ],
-        'ko': [
-            "{} 사진",
-            "{}"
+        'ja': [
+            '{}',
+            '{}の写真'
         ]
     },
     'imagenet_r': {

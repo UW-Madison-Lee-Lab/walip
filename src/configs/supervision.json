@@ -1,0 +1,6 @@
+{
+  "emb_type": "fasttext",
+  "work_mode": "s",
+  "method": "muse_200k",
+  "reuse_emb": 1
+}

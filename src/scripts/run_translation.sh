@@ -1,6 +1,12 @@
+### 
+src=$1
+tgt=$2
+
+# extract embs
+python extract_howto.py -s $src -t $tgt -e htw
 # filter nouns
-python main.py -c a
+python main.py -s $src -t $tgt -w c -p c
 # unsupervised 
-python main.py -c u --save_lst 1
+python main.py -s $src -t $tgt -w c -p u
 # robust procrustes
-python main.py -c s
+python main.py -s $src -t $tgt -w c -p t

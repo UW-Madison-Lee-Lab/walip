@@ -1,0 +1,22 @@
+{
+  "character_frequency": {
+    "emb_type": "fp",
+    "reuse_emb": 1
+  },
+  "substring_matching": {
+    "emb_type": "fp",
+    "reuse_emb": 1
+  },
+  "cluster": {
+    "emb_type": "fp",
+    "reuse_emb": 1
+  },
+  "unsupervised": {
+    "emb_type": "fp",
+    "reuse_emb": 1
+  },
+  "translation": {
+    "emb_type": "htw", 
+    "reuse_emb": 1
+  }
+}

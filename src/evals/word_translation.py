@@ -42,7 +42,7 @@ def get_nn_avg_dist(emb, query, knn):
         query = query.cpu().numpy()
         emb = np.float32(emb)
         query = np.float32(query)
-        if hasattr(faiss, 'StandardGpuResources'):
+        if hasattr(faiss, 'StandardGpuResources') and False: # someway wrong here!!!!!! to use GPU it's every slow
             # gpu mode
             res = faiss.StandardGpuResources()
             config = faiss.GpuIndexFlatConfig()
@@ -200,7 +200,7 @@ def get_topk_translation_accuracy(dico, scores):
         results.append('prec_@{}: {:.2f}'.format(k, precision_at_k))
     return results
 
-def read_txt_embeddings(lang, emb_path, emb_dim=300, full_vocab=False):
+def read_txt_embeddings(emb_path, emb_dim=300, full_vocab=False):
     """
     Reload pretrained embeddings from a text file.
     """

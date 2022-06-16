@@ -4,8 +4,10 @@ import numpy as np
 import configs
 from utils.helper import generate_path
 
-def load_vocabs_from_pairs(langs, word_data, data_mode):
+def load_vocabs_from_pairs(langs, word_data, data_mode, duplicate=False, path =None):
     fpath = generate_path('txt_pair', {'word_data': word_data, 'src_lang': langs['src'], 'tgt_lang': langs['tgt'], 'data_mode': data_mode})
+    if path != None:
+        fpath = path
     vocabs = {'src':[], 'tgt': []}
     with open(fpath) as f:
         lines = f.readlines()
@@ -14,8 +16,14 @@ def load_vocabs_from_pairs(langs, word_data, data_mode):
             x, y = l.strip().lower().split()
         else:
             x, y = l.strip().lower().split()
-        vocabs['src'].append(x)
-        vocabs['tgt'].append(y)
+        if duplicate:
+            vocabs['src'].append(x)
+            vocabs['tgt'].append(y)
+        else:
+            if x not in vocabs['src']:
+                vocabs['src'].append(x)
+            if y not in vocabs['tgt']:
+                vocabs['tgt'].append(y)
     return vocabs
 
 def load_vocabs(lang, langs, word_data, data_mode):
@@ -28,7 +36,9 @@ def load_vocabs(lang, langs, word_data, data_mode):
     vocabs = [] # order
     for desc in lines:
         desc = desc.strip().lower()
-        vocabs.append(desc)
+        if desc not in vocabs:
+            vocabs.append(desc)
+    print(f'Loaded {len(vocabs)} words from {fpath}')
     return vocabs
 
 def write_vocabs(vocabs, lang, langs, word_data, data_mode):
