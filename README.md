@@ -17,9 +17,9 @@ python preprocess.py <src_lang> <tgt_lang>
 Fasttext embeddings can be downloaded as follows:
 ```
 # English fastText Wikipedia embeddings
-curl -Lo data/wiki.en.vec https://dl.fbaipublicfiles.com/fasttext/vectors-wiki/wiki.en.vec
+curl -Lo wiki.en.vec https://dl.fbaipublicfiles.com/fasttext/vectors-wiki/wiki.en.vec
 # French fastText Wikipedia embeddings
-curl -Lo data/wiki.fr.vec https://dl.fbaipublicfiles.com/fasttext/vectors-wiki/wiki.fr.vec
+curl -Lo wiki.fr.vec https://dl.fbaipublicfiles.com/fasttext/vectors-wiki/wiki.fr.vec
 ```
 
 HTW word2vec files can be downloaded from [here](https://github.com/gsig/visual-grounding/tree/master/word_vectors)
@@ -43,7 +43,7 @@ We have a [finetuning](src/finetune_clip.py) script to finetune CLIP models, alt
 * [japanese](https://github.com/rinnakk/japanese-clip)
 * [korean](https://github.com/jaketae/koclip)
 
-You can follow instructions on their github to run the pip install command, and install relevant files in the src/models folder.
+You can follow instructions on their github to run the pip install command, and install relevant files (if any) in the src/models folder.
 
 To use your own finetuned CLIP model, put the checkpoint into the results/clips folder with the name best_{lang}.pt where lang is the language abbreviation. 
 
