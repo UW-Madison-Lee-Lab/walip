@@ -78,7 +78,7 @@ if EMB == 'htw':
     from utils.helper import generate_path
     fpath = generate_path('txt_pair', {'word_data': word_data, 'src_lang': args.langs['src'], 'tgt_lang': args.langs['tgt'], 'data_mode': args.data_mode})
     vocabs = {'src':[], 'tgt': []}
-    print(fpath)
+
     with open(orig_path) as f:
         lines = f.readlines()
 

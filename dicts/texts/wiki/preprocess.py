@@ -1,6 +1,9 @@
+import sys
 data = "wiki"
-srclang = "en"
-tgtlang = "ja"
+
+srclang = sys.argv[1]
+tgtlang = sys.argv[2]
+
 path = f"orig_{data}_{srclang}_{tgtlang}_test.txt"
 
 srcset = []

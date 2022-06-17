@@ -6,10 +6,10 @@
 To run the code, you must download or provide the dictionary you want to evaluate on. We provide an example in the [dicts/texts/wiki](dicts/texts/wiki) folder. The [test dictionary](dicts/texts/wiki/wiki_en_fr_test.txt) was obtained [here](https://github.com/facebookresearch/MUSE#ground-truth-bilingual-dictionaries), which also contains over 110 other bilingual ground truth dictionaries. To prepare the dictionary for evaluation:
 
 * Download the dictionary and place it in the [dicts/texts/wiki](dicts/texts/wiki) folder
-* Rename the downloaded dictionary to the format wiki_{src_language}_{tgt_language}_test.txt, replacing the {} with source and target language abbreviations. For example, for the english to french dictionary, it should be named wiki_en_fr_test.txt
-* Run the [process.py script](dicts/texts/wiki/process.py) script in the dicts/texts/wiki folder:
+* Rename the downloaded dictionary to the format orig_wiki_{src_language}_{tgt_language}_test.txt, replacing the {} with source and target language abbreviations. For example, for the english to french dictionary, it should be named wiki_en_fr_test.txt
+* Run the [preprocess.py script](dicts/texts/wiki/preprocess.py) script in the dicts/texts/wiki folder:
 ```
-python process.py <src_lang> <tgt_lang>
+python preprocess.py <src_lang> <tgt_lang>
 ```
 
 ---
@@ -19,7 +19,7 @@ Fasttext embeddings can be downloaded as follows:
 # English fastText Wikipedia embeddings
 curl -Lo data/wiki.en.vec https://dl.fbaipublicfiles.com/fasttext/vectors-wiki/wiki.en.vec
 # French fastText Wikipedia embeddings
-curl -Lo data/wiki.es.vec https://dl.fbaipublicfiles.com/fasttext/vectors-wiki/wiki.fr.vec
+curl -Lo data/wiki.fr.vec https://dl.fbaipublicfiles.com/fasttext/vectors-wiki/wiki.fr.vec
 ```
 
 HTW word2vec files can be downloaded from [here](https://github.com/gsig/visual-grounding/tree/master/word_vectors)
@@ -36,7 +36,9 @@ wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/
 ---
 ### Obtain CLIP models for source and target languages
 
-We have a [finetuning](src/finetune_clip.py) script to finetune CLIP models, although there are many publicly available clip models we use as well for [english](https://github.com/openai/CLIP), [russian](https://github.com/ai-forever/ru-clip), [japanese](https://github.com/rinnakk/japanese-clip) and [korean](https://github.com/jaketae/koclip). You can follow instructions on their github to run the pip install command.      
+We have a [finetuning](src/finetune_clip.py) script to finetune CLIP models, although there are many publicly available clip models we use as well for [english](https://github.com/openai/CLIP), [russian](https://github.com/ai-forever/ru-clip), [japanese](https://github.com/rinnakk/japanese-clip) and [korean](https://github.com/jaketae/koclip). You can follow instructions on their github to run the pip install command.
+
+To use your own finetuned CLIP model, put the checkpoint into the results/clips folder with the name best_{lang}.pt where lang is the language abbreviation. 
 
 ---
 ### Running Scripts

@@ -152,6 +152,9 @@ def load_image_data(image_name, num_images, using_filtered_images, src_lang, tgt
     images = []
     for c in range(num_classes):
         indices = np.argwhere(labels == c)
+
+        if len(indices) == 0:
+            continue
         # np.random.shuffle(indices)
         images += [image_dataset[indices[i][0]][0] for i in range(num_images)]
     images = np.stack(images, axis=0)
