@@ -1,4 +1,3 @@
-# from this import d
 import numpy as np
 import torch
 from tclip.CLIP import CLIPModel as TClip

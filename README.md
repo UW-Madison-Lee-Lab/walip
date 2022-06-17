@@ -36,7 +36,14 @@ wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/
 ---
 ### Obtain CLIP models for source and target languages
 
-We have a [finetuning](src/finetune_clip.py) script to finetune CLIP models, although there are many publicly available clip models we use as well for [english](https://github.com/openai/CLIP), [russian](https://github.com/ai-forever/ru-clip), [japanese](https://github.com/rinnakk/japanese-clip) and [korean](https://github.com/jaketae/koclip). You can follow instructions on their github to run the pip install command.
+We have a [finetuning](src/finetune_clip.py) script to finetune CLIP models, although there are many publicly available clip models we use as well for 
+
+* [english](https://github.com/openai/CLIP)
+* [russian](https://github.com/ai-forever/ru-clip)
+* [japanese](https://github.com/rinnakk/japanese-clip)
+* [korean](https://github.com/jaketae/koclip)
+
+You can follow instructions on their github to run the pip install command, and install relevant files in the src/models folder.
 
 To use your own finetuned CLIP model, put the checkpoint into the results/clips folder with the name best_{lang}.pt where lang is the language abbreviation. 
 
@@ -53,3 +60,7 @@ Then you can run in the src folder:
 ./scripts/run_translation.sh <src_lang> <tgt_lang>
 ```
 The best recall@1 and recall@10 will be printed at the end, and the best mapping will be saved into the results/mapping/ours folder
+
+### Credits
+
+We make use of the following repositories to help in our experiments: [MUSE](https://github.com/facebookresearch/MUSE), [Visual Grounding in Video](https://github.com/gsig/visual-grounding), [OpenAI CLIP](https://github.com/openai/CLIP), [Russian CLIP](https://github.com/ai-forever/ru-clip), [Japanese CLIP](https://github.com/rinnakk/japanese-clip) and [Korean CLIP](https://github.com/jaketae/koclip)
