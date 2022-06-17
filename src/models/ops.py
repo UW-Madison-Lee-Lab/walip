@@ -4,7 +4,6 @@ import torch
 from tclip.CLIP import CLIPModel as TClip
 from transformers import CLIPModel, CLIPTokenizer
 import clip
-import ruclip
 from torchvision import transforms
 
 class ClipObject():
@@ -153,6 +152,7 @@ def load_models(lang, device='cuda:0', large_model=False, model_dir='../results/
         if lang == 'en' or '2' in lang:
             model = EnglishClipObject(device=device)
         elif lang == 'ru':
+            import ruclip
             model = RuClipObject(name='ruclip-vit-base-patch32-224', device=device)
         elif lang == 'ja':
             import japanese_clip as ja_clip
@@ -179,31 +179,3 @@ def load_models(lang, device='cuda:0', large_model=False, model_dir='../results/
         model.eval()
         logit_scale = np.exp(model.temperature)
         return model, logit_scale, None
-
-
-
-#####
-# elif lang == 'sw':
-#     from mclip import multilingual_clip
-#     text_model = multilingual_clip.load_model('Swe-CLIP-2M')
-#     # text_model = multilingual_clip.load_model('M-BERT-Distil-40')
-#     img_model, preprocess = clip.load('RN50x4')
-#     text_model = text_model.eval()
-#     img_model = img_model.to(device).eval()
-#     logit_scale = img_model.logit_scale.exp().float()
-#     clip_model = ClipObject(text_model, img_model, device=device)
-# elif lang == 'it':
-#     preprocess = None
-#         from models.clip_italian import get_italian_models
-#         img_model, text_model = get_italian_models()
-#         clip_model = ClipObject(text_model, img_model, italian=True, device=device)
-#         logit_scale = 20.0
-# M-CLIP: from mclip import multilingual_clip
-# text_model = multilingual_clip.load_model('M-BERT-Distil-40')
-#             img_model, preprocess = clip.load('RN50x4')
-#             text_model = text_model.eval()
-#             img_model = img_model.to(device).eval()
-#             logit_scale = img_model.logit_scale.exp().float()
-#             clip_model = ClipObject(text_model, img_model, device=device)
-#             preprocess = None
-####

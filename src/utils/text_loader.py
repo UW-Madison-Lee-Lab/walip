@@ -3,7 +3,6 @@ import os, sys
 import numpy as np
 import configs
 from utils.helper import generate_path
-from pathlib import Path
 
 def load_vocabs_from_pairs(langs, word_data, data_mode, duplicate=False, path =None):
     fpath = generate_path('txt_pair', {'word_data': word_data, 'src_lang': langs['src'], 'tgt_lang': langs['tgt'], 'data_mode': data_mode})
@@ -44,7 +43,6 @@ def load_vocabs(lang, langs, word_data, data_mode):
 
 def write_vocabs(vocabs, lang, langs, word_data, data_mode):
     fpath = generate_path('txt_single', {'word_data': word_data, 'lang': lang, 'src_lang': langs['src'], 'tgt_lang': langs['tgt'], 'data_mode': data_mode})
-    Path(fpath).mkdir(parents=True, exist_ok=True)
     f = open(fpath, "w") 
     for i in range(len(vocabs)):
         f.write(f"{vocabs[i]}\n")
