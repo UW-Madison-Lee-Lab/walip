@@ -3,10 +3,10 @@
 ## Instructions
 ---
 ### Providing a test dictionary
-To run the code, you must download or provide the dictionary you want to evaluate on. We provide an example in the [dicts/texts/wiki](dicts/texts/wiki) folder. The [test dictionary](dicts/texts/wiki/wiki_en_fr_test.txt) was obtained [here](https://github.com/facebookresearch/MUSE#ground-truth-bilingual-dictionaries), which also contains over 110 other bilingual ground truth dictionaries. To prepare the dictionary for evaluation:
+To run the code, you must download or provide the dictionary you want to evaluate on. We provide some examples in the [dicts/texts/wiki](dicts/texts/wiki) folder. The test dictionaries were obtained [here](https://github.com/facebookresearch/MUSE#ground-truth-bilingual-dictionaries), which also contains over 110 other bilingual ground truth dictionaries. To prepare the dictionary for evaluation:
 
 * Download the dictionary and place it in the [dicts/texts/wiki](dicts/texts/wiki) folder
-* Rename the downloaded dictionary to the format orig_wiki_{src_language}_{tgt_language}_test.txt, replacing the {} with source and target language abbreviations. For example, for the english to french dictionary, it should be named wiki_en_fr_test.txt
+* Rename the downloaded dictionary to the format orig_wiki_{src_language}_{tgt_language}_test.txt, replacing the {} with source and target language abbreviations. For example, for the english to french dictionary, it should be named orig_wiki_en_fr_test.txt
 * Run the [preprocess.py script](dicts/texts/wiki/preprocess.py) script in the dicts/texts/wiki folder:
 ```
 python preprocess.py <src_lang> <tgt_lang>
