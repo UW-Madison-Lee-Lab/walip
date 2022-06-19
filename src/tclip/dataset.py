@@ -27,7 +27,6 @@ def prepare_dataframe(lang, captions_path):
     valid_ids = np.random.choice(
         image_ids, size=int(0.2 * len(image_ids)), replace=False
     )
-    # valid_ids = image_ids[len(image_ids)-1000:len(image_ids)]
     train_ids = [id_ for id_ in image_ids if id_ not in valid_ids]
     train_images = [x[i] for i in train_ids]
     val_images = [x[i] for i in valid_ids]

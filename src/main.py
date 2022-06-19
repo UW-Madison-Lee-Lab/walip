@@ -1,15 +1,12 @@
 import os, torch, sys
 import numpy as np
 import argparse, json
-
-from models.embedding import ClipEmbedding
-from models.ops import load_models
-from tclip.clip_ops import zero_shot_classification
-from translation import align_words, load_test_dict, train_supervision, cal_similarity, robust_procrustes, get_recall
-from evals.word_translation import read_txt_embeddings
 import torch.nn.functional as F
 
-from utils.helper import dict2clsattr, check_noun, generate_path
+from models.embedding import ClipEmbedding
+from translation import align_words, load_test_dict, train_supervision, cal_similarity, robust_procrustes, get_recall
+from evals.word_translation import read_txt_embeddings
+from utils.helper import dict2clsattr, generate_path
 from utils.text_loader import get_word2id, load_vocabs, load_vocabs_from_pairs, write_vocabs
 
 import configs
@@ -176,15 +173,6 @@ def lcs(s1, s2):
                m[x][y] = 0
    return s1[x_longest - longest: x_longest]
 ###============= Working Mode =============##########
-
-
-if args.work_mode == 'analysis':
-    lang = args.tgt_lang
-    model, logit_scale, preprocess = load_models(lang, configs.model_names[lang], 'coco', args.device, args.large_model) 
-    zero_shot_classification(args, model, args.image_data, args.word_data, lang, logit_scale, preprocess)
-    sys.exit("DONE!!!!") 
-
-###============= CUWT =============##########
 if args.work_mode == 'c': # CUWT
     ###============= Clustering =============##########
     if args.cuwt_phase == 'c': # cluster
@@ -318,7 +306,6 @@ if args.work_mode == 'c': # CUWT
 
     else: # semi, zero-shot, transition
         ###============= Unsupervised =============##########
-        # Using wiki-noun
         orig_data = args.word_data
         noun_data = args.word_data + '_noun'
         lst_path = f'../results/indices/indices_{args.src_lang}_{args.tgt_lang}_{noun_data}_{args.large_model}.npy'
@@ -358,17 +345,12 @@ if args.work_mode == 'c': # CUWT
             embs['src'] = embs['src'][src_ids, :] # 1500
             if args.translation == "s": # semi
                 if args.emb_type == "globe":
-                    #_, src_near, tgt_near = get_mutual_nn(embs['src'].cpu().numpy(), embs['tgt'].cpu().numpy(), lambda x, y: -np.dot(x, y))
-                    #X0 = torch.tensor(src_near).to(args.device)#[ind0, :]
-                    #X1 = torch.tensor(tgt_near).to(args.device)
                     import scipy
                     X0 = embs['src'][test_dico[:, 0]]#[ind0, :]
                     X1 = embs['tgt'][test_dico[:, 1]]
                     M = X1.transpose(0, 1).mm(X0).cpu().numpy()
                     U, Sigma, VT = scipy.linalg.svd(M, full_matrices=True)
-    # W = U @ VT
                     W = U.dot(VT)
-                    
                 else:
                     args.word_data = noun_data
                     inds = np.load(lst_path, allow_pickle=True)
@@ -408,8 +390,6 @@ if args.work_mode == 'c': # CUWT
 
             def estimate_validation(X, Y):
                 return ((Y - X)**2).sum(dim=1).mean()
-                # e = 1 - F.cosine_similarity(Y, X, dim=1).mean()
-                return e
             
             def adapt_hyperparams(j):
                 if j < 5:
@@ -418,12 +398,6 @@ if args.work_mode == 'c': # CUWT
                     k = 10
                 else:
                     k = 3
-                # if j % 3 == 0:
-                #     c = 0.7
-                # elif j % 3 == 1:
-                #     c = 0.3
-                # else: 
-                #     c = 0.5
                 c = 0.3 if j % 2 == 1 else 0.7
                 return k, c
 
@@ -460,9 +434,6 @@ if args.work_mode == 'c': # CUWT
                 # accuracy
             else:
                 best_W = W
-                #W = torch.FloatTensor(np.load("../results/mapping/ours/W_htw_en_ko_best.npy")).to(args.device)
-                ind0 = run(embs, W, None, 1, 0)
-                r1, r10 = run(embs, W, src_test_dico)
                 X0, X1 = embs['src'][ind0[:, 0], :], embs['tgt'][ind0[:, 1], :]
                 error = estimate_validation(X0@W.T, X1)
                 # accuracy
@@ -470,8 +441,6 @@ if args.work_mode == 'c': # CUWT
                 best_recall = r1
                 best_error = error
                 for j in range(40):  # refinement
-                    # evaluation with test-dico
-                    # iterate Procrustes
                     k, c = adapt_hyperparams(j)
                     print('Iter', j, 'k', k, 'c', c)
                     # identify the highly similar pairs
@@ -495,8 +464,6 @@ if args.work_mode == 'c': # CUWT
                 np.save(f'{mapping_dir}/W_{args.emb_type}_{args.src_lang}_{args.tgt_lang}', W.cpu().numpy())
 
 elif args.work_mode == 'b' and args.translation == 'nn': 
-    #  args.baseline == 'nn':
-    # load two fingerprints 
     args.emb_type = 'fp'
     word2ids, embs = load_two_embeddings(args.langs, args.emb_type, args.word_data, args.data_mode, args)
     test_dico = load_test_dict(args, word2ids)
@@ -523,7 +490,7 @@ else:
     if args.work_mode == 's': #supervision
         root = f"../dicts/embeddings/fasttext/wiki/fasttext_wiki_{args.langs['src']}_{args.langs['tgt']}"
         X = {}
-        if True or not os.path.isfile(root + f"_{args.langs['src']}_val.npy"):
+        if not os.path.isfile(root + f"_{args.langs['src']}_val.npy"):
             # ### Get MUSE vocabs
             print('Loading MUSE pairs')
             vocabs = load_vocabs_from_pairs(args.langs, args.word_data, 'val', duplicate=True)

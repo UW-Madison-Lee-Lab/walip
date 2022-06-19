@@ -59,7 +59,8 @@ Then you can run in the src folder:
 ```
 ./scripts/run_translation.sh <src_lang> <tgt_lang>
 ```
-The best recall@1 and recall@10 will be printed at the end, and the best mapping will be saved into the results/mapping/ours folder
+The best recall@1 and recall@10 will be printed at the end, and the best mapping will be saved into the results/mapping/ours folder.
+The learned mappings from our runs can be found in this folder.
 
 ### Credits
 

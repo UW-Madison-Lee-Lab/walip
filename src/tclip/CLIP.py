@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import numpy as np
 import torch.nn.functional as F
-from tclip.modules import ImageEncoder_resnet, ImageEncoder_ViT, TextEncoder, ProjectionHead
+from tclip.modules import ImageEncoder_ViT, TextEncoder, ProjectionHead
 from transformers import BertTokenizer, AutoTokenizer
 
 def get_tokenizer(lang, model_name):

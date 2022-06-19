@@ -8,7 +8,6 @@ from utils.text_loader import load_vocabs
 from utils.image_loader import load_image_dataset
 from utils.helper import AverageMeter, accuracy
 from models.templates import prompts, generate_texts
-from models.ops import load_models
 import configs
 from tqdm import tqdm
 import numpy as np
@@ -32,15 +31,8 @@ def load_label_embs(model, lang, langs, word_data, data_mode, num_prompts):
     text_embeddings = torch.cat(text_embeddings, dim=0)
     return text_embeddings
 
-# def load_image_and_class(model, preprocess, image_data, lang, opts, multilabel = False):
-#     image_dataset = load_image_dataset(image_data, preprocess=preprocess, multilabel = multilabel)
-#     dataloader = DataLoader(image_dataset, batch_size=opts.batch_size, shuffle=False, drop_last=True, num_workers=4)
-#     return text_embeddings, dataloader
 
 
-def zero_shot_classification(opts, model, image_data, word_data, lang, logit_scale, preprocess=None):
-    label_embeddings = load_label_embs(model, lang, opts.langs, word_data, opts.data_mode, opts.num_prompts)
-    image_dataset = load_image_dataset(image_data, preprocess=preprocess)
     s, scores, batch_size = 0, [], 64
     if False: # per class test
         num_classes = configs.num_classes[image_data]
