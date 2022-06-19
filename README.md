@@ -2,6 +2,21 @@
 
 ## Instructions
 ---
+### Setting up an Environment
+
+From a fresh anaconda environment, we recommend first installing the latest stable version of pytorch. Instructions are available on their [website](https://pytorch.org/get-started/locally/) which might differ for different operating systems. For example, on a linux computer, the following should work:
+
+```
+conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+```
+
+After installing pytorch, you may install the requirements using the requirements.txt file:
+
+```
+pip install -r requirements.txt
+```
+
+---
 ### Providing a test dictionary
 To run the code, you must download or provide the dictionary you want to evaluate on. We provide some examples in the [dicts/texts/wiki](dicts/texts/wiki) folder. The test dictionaries were obtained [here](https://github.com/facebookresearch/MUSE#ground-truth-bilingual-dictionaries), which also contains over 110 other bilingual ground truth dictionaries. To prepare the dictionary for evaluation:
 
