@@ -425,7 +425,6 @@ if args.work_mode == 'c': # CUWT
                 print('Best recall {:.2f}, error {:.2f}'.format(best_recall, best_error))
             elif args.proc == 'globe':
                 best_W = W
-                print(W)
                 ind0 = run(embs, W, None, 1, 0)
                 r1, r10 = run(embs, W, test_dico)
                 X0, X1 = embs['src'][ind0[:, 0], :], embs['tgt'][ind0[:, 1], :]
@@ -434,6 +433,8 @@ if args.work_mode == 'c': # CUWT
                 # accuracy
             else:
                 best_W = W
+                ind0 = run(embs, W, None, 1, 0)
+                r1, r10 = run(embs, W, src_test_dico)
                 X0, X1 = embs['src'][ind0[:, 0], :], embs['tgt'][ind0[:, 1], :]
                 error = estimate_validation(X0@W.T, X1)
                 # accuracy

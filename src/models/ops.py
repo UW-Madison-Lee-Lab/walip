@@ -3,6 +3,7 @@ import torch
 from tclip.CLIP import CLIPModel as TClip
 from transformers import CLIPModel, CLIPTokenizer
 import clip
+import ruclip
 from torchvision import transforms
 
 class ClipObject():
@@ -104,7 +105,6 @@ class JapaneseClipObject():
         self.tokenizer = self.ja_clip.load_tokenizer()
 
     def encode_image(self, imgs):
-        print(f"Images have the shape {imgs.shape} with type {type(imgs)}")
         i_emb = self.model.get_image_features(pixel_values=imgs)
         return i_emb.type(torch.FloatTensor).to(self.device)
     

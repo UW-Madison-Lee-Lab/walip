@@ -44,13 +44,11 @@ class ClipEmbedding():
         if self.opts.reuse_emb or self.lang_opts["reuse_emb"]:
             if os.path.isfile(self.emb_path):
                 print('.....', 'Reuse emb', get_basename(self.emb_path))
-                print(self.emb_path)
                 return np.load(self.emb_path, allow_pickle=True)
             else:
                 print("No embedding exists!!!")
 
         ########### New Embeddings ############
-        print(self.emb_path)
         if self.emb_type in [configs.FASTTEXT, configs.GLOBE, configs.HTW]:
             if os.path.isfile(self.emb_path):
                 embs = np.load(self.emb_path, allow_pickle=True)
