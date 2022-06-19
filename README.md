@@ -1,4 +1,4 @@
-# Unsupervised Word Translation with Clip-based Embedding
+# Utilizing Language-Image Pretraining for Efficient and Robust Bilingual Word Alignment
 
 ## Instructions
 ---
