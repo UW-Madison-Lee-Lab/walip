@@ -53,10 +53,10 @@ wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/
 
 We have a [finetuning](src/finetune_clip.py) script to finetune CLIP models, although there are many publicly available clip models we use as well for 
 
-* [english](https://github.com/openai/CLIP)
-* [russian](https://github.com/ai-forever/ru-clip)
-* [japanese](https://github.com/rinnakk/japanese-clip)
-* [korean](https://github.com/jaketae/koclip)
+* [English](https://github.com/openai/CLIP)
+* [Russian](https://github.com/ai-forever/ru-clip)
+* [Japanese](https://github.com/rinnakk/japanese-clip)
+* [Korean](https://github.com/jaketae/koclip)
 
 You can follow instructions on their github to run the pip install command, and install relevant files (if any) in the src/models folder.
 
