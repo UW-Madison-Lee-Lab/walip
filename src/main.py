@@ -181,7 +181,7 @@ if args.work_mode == 'c': # CUWT
             vocab = load_vocabs(args.langs[l], args.langs, args.word_data, args.data_mode)
             fp = embs[l] # n x m
             max_cos = torch.topk(fp, 2, dim=1)[0].sum(dim=1).cpu().numpy()
-            med = np.quantile(max_cos, 0.5) # 0.25
+            med = np.quantile(max_cos, 0.5)
             ind = np.where(max_cos > med)[0]
             nouns, new_ind = [], []
             for i in ind:
@@ -392,13 +392,18 @@ if args.work_mode == 'c': # CUWT
                 return ((Y - X)**2).sum(dim=1).mean()
             
             def adapt_hyperparams(j):
-                if j < 5:
-                    k = 15
-                elif j < 10:
+                if j < 10:
                     k = 10
-                else:
+                    c = 0.7
+                elif j < 20:
+                    k = 5
+                    c = 0.5
+                elif k < 30:
                     k = 3
-                c = 0.3 if j % 2 == 1 else 0.7
+                    c = 0.3
+                else:
+                    k = 1
+                    c = 0.1
                 return k, c
 
             if args.proc == 'normal':

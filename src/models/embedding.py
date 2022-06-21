@@ -86,9 +86,6 @@ class ClipEmbedding():
                 images = load_image_data(self.opts.image_data, self.opts.num_images, self.opts.using_filtered_images, self.opts.src_lang, self.opts.tgt_lang, self.preprocess)
                 np.save(img_pth, images)
             images = torch.Tensor(images)
-            # save image 
-            # save_images(images, f'../results/base_images_{self.str_filter}.png', nrows=int(images.shape[0]**0.5))
-            ### Model embeddings
             list_img_embs = []
             with torch.no_grad():
                 for batch_ids in tqdm(chunks(32, range(images.shape[0]))):

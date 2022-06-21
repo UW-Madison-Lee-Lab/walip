@@ -58,7 +58,6 @@ class ViTDataset(Dataset):
         return img['pixel_values'][0], self.targets[index]
 
 
-# label is in format 1 3 10 with 11 classes converts to -> [0,1,0,1,0,0,0,0,0,0,1]
 def one_hot(label, n_classes):
     l = np.zeros(n_classes)
     indices = [int(x) for x in label.split(" ")]

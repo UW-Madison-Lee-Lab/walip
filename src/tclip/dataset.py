@@ -37,19 +37,6 @@ def prepare_dataframe(lang, captions_path):
 def build_loaders(df, mode, params):
     image_ids = df["image_id"].values
     image_filenames = [f"{params.image_path}/{params.image_prefix}{str(image_ids[i]).zfill(12)}.jpg" for i in range(len(image_ids))] 
-    # not_avai = []
-    # for i in range(len(image_ids)):
-    #     if not os.path.isfile(image_filenames[i]):
-    #         not_avai.append(i)
-    # df = df.drop(df.index[not_avai])
-    # image_ids = df["image_id"].values
-    # image_filenames = [f"{params.image_path}/{params.image_prefix}{str(image_ids[i]).zfill(12)}.jpg" for i in range(len(image_ids))] 
-    # if params.lang == 'it':
-    #     dataset = CLIPDataset_resnet(
-    #         image_filenames,
-    #         df["caption"].values,
-    #     )
-    # else:
     dataset = CLIPDataset_ViT(
         image_filenames,
         df["caption"].values,

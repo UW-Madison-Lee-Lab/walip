@@ -3,22 +3,6 @@ import os
 from itertools import chain
 from torchvision.utils import save_image
 
-def check_noun(vocabs):
-    import spacy
-    nlp = spacy.load("en_core_web_sm")
-    count = 0
-    for w in vocabs:
-        doc = nlp(w)
-        if doc[0].pos_ == 'NOUN':
-            count += 1
-    print('Nouns: ', count/len(vocabs))
-    
-
-def plotW(score, name):
-    plt.imshow(score)
-    plt.colorbar()
-    plt.savefig('../results/W_{}.png'.format(name))
-    plt.close()
 
 def save_images(samples, save_path, nrows=0):
     if nrows == 0:
@@ -68,7 +52,6 @@ def get_accuracy(dico, col_ind):
             s+=1
         else:
             wrong_pairs.append([i, col_ind[i], dico[i, 1]])
-            # print(i, '->', col_ind[i], vocabs[0][i], '->', vocabs[0][col_ind[i]])
     acc = s/dico.shape[0] * 100
     print('Accuracy: {:.4f}/100'.format(acc))
     return acc, wrong_pairs

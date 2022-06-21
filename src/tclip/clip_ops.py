@@ -30,27 +30,6 @@ def load_label_embs(model, lang, langs, word_data, data_mode, num_prompts):
             text_embeddings.append(batch_txt_embs)
     text_embeddings = torch.cat(text_embeddings, dim=0)
     return text_embeddings
-
-
-
-    s, scores, batch_size = 0, [], 64
-    if False: # per class test
-        num_classes = configs.num_classes[image_data]
-        for c in range(num_classes):
-            indices = np.argwhere(np.asarray(image_dataset.targets) == c)
-            indices = indices.reshape(len(indices))
-            data = Subset(image_dataset, indices.tolist())
-            dataloader = DataLoader(data, batch_size=batch_size, shuffle=False, drop_last=True, num_workers=4)
-            print("Class ", c)
-            top1, top5 = validate(model, label_embeddings, dataloader, opts.device, logit_scale)
-            s += top1
-            scores.append(top1)
-        print('ACC: ', s/num_classes)
-        for i in range(num_classes):
-            print(scores[i])
-    else:
-        dataloader = DataLoader(image_dataset, batch_size=batch_size, shuffle=False, drop_last=True, num_workers=4)
-        top1, top5 = validate(model, label_embeddings, dataloader, opts.device, logit_scale)
     
 def validate(model, text_embeddings, dataloader, device, logit_scale=1.0):
     text_embeddings = text_embeddings.type(torch.FloatTensor).to(device)
@@ -69,8 +48,6 @@ def validate(model, text_embeddings, dataloader, device, logit_scale=1.0):
         precs = accuracy(logits, labels, topk=(1, 5))
         top1.update(precs[0].item(), images.size(0))
         top5.update(precs[1].item(), images.size(0))
-        # sys.stdout.write("Top1 {:.4f} Top5: {:.4f}".format(top1.avg, top5.avg)) 
-        # sys.stdout.flush() 
         tqdm_object.set_postfix(top1_acc=top1.avg)
         torch.cuda.empty_cache()
 
@@ -95,8 +72,6 @@ def evaluate_multilabel_classification(image_data, lang, opts):
         for (images, labels) in tqdm_object:
             labels = labels.long().to(opts.device)
             images = images.to(opts.device)
-            
-            # Should be of shape (batch_sz, num_classes)
             image_features = model.image_encoder(images)
             image_embeddings = model.image_projection(image_features)
             image_embeddings = F.normalize(image_embeddings, dim=-1)
@@ -127,14 +102,3 @@ def evaluate_multilabel_classification(image_data, lang, opts):
     
     return FinalMAPs
 
-
-
-
-# def evaluate_classification(image_data, lang, opts, model=None):
-#     if model is None:
-#         model_name = configs.model_names[lang]
-#         model, logit_scale, preprocess = load_models(lang, model_name, 'coco', opts.device, opts.large_model) 
-#     else:
-#         preprocess = None
-#     text_embeddings, dataloader = load_image_and_class(model, preprocess, image_data, lang, opts)
-#     validate(model, text_embeddings, dataloader, opts.device)

@@ -42,7 +42,7 @@ def get_nn_avg_dist(emb, query, knn):
         query = query.cpu().numpy()
         emb = np.float32(emb)
         query = np.float32(query)
-        if hasattr(faiss, 'StandardGpuResources') and False: # someway wrong here!!!!!! to use GPU it's every slow
+        if hasattr(faiss, 'StandardGpuResources'): # someway wrong here!!!!!! to use GPU it's every slow
             # gpu mode
             res = faiss.StandardGpuResources()
             config = faiss.GpuIndexFlatConfig()
@@ -143,11 +143,6 @@ def get_csls_word_translation(dico, emb1, emb2, sim_score='csls'):
     Given source and target word embeddings, and a dictionary,
     evaluate the translation accuracy using the precision@k.
     """
-    # dico = dico.cuda() if embs[0].is_cuda else dico
-    # normalize word embeddings
-    # emb1 = emb1 / emb1.norm(2, 1, keepdim=True).expand_as(emb1)
-    # emb2 = emb2 / emb2.norm(2, 1, keepdim=True).expand_as(emb2)
-
     # nearest neighbors
     if dico is None:
         query = emb1
@@ -162,13 +157,11 @@ def get_csls_word_translation(dico, emb1, emb2, sim_score='csls'):
         # average distances to k nearest neighbors
         knn = 10 #method[len('csls_knn_'):]
         # assert knn.isdigit()
-        # knn = int(knn)
         average_dist1 = get_nn_avg_dist(emb2, emb1, knn)
         average_dist2 = get_nn_avg_dist(emb1, emb2, knn)
         average_dist1 = torch.from_numpy(average_dist1).type_as(emb1)
         average_dist2 = torch.from_numpy(average_dist2).type_as(emb2)
         # queries / scores
-        # query = emb1[dico[:, 0]]
         scores = query.mm(emb2.transpose(0, 1))
         scores.mul_(2)
         if dico is None:
