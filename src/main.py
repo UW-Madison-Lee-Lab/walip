@@ -394,7 +394,7 @@ if args.work_mode == 'c': # CUWT
             def adapt_hyperparams(j):
                 if j < 10:
                     k = 10
-                    c = 0.7
+                    c = 0.5
                 elif j < 20:
                     k = 5
                     c = 0.5
