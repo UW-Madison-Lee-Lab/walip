@@ -37,8 +37,8 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
-*.pth
-*.npy
+# *.pth
+# *.npy
 OpenAI-CLIP/
 upload.sh
 download.sh
