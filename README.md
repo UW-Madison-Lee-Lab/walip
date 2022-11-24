@@ -12,13 +12,16 @@ Word translation without parallel corpora has become feasible, rivaling the perf
 </p> -->
 
 <p align="center">
-  <b>The high-level illustration of WALIP (Word Alignment with Language-Image Pretraining)</b><br>
   <img src="imgs/walip_high_level_idea.png">
+  <b>The high-level illustration of WALIP (Word Alignment with Language-Image Pretraining)</b>
+    <br>
+  <img src="imgs/walip_framework.png">
+  <b>The two-step procedure of WALIP</b>
 </p>
 
 
-![The two-step procedure of WALIP](imgs/walip_framework.png)
-<p style="text-align: center;">The two-step procedure of WALIP</p>
+<!-- ![The two-step procedure of WALIP](imgs/walip_framework.png)
+<p style="text-align: center;">The two-step procedure of WALIP</p> -->
 
 
 ## Instructions for running the experiments
