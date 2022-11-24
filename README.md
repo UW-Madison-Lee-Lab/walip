@@ -6,10 +6,16 @@ This repository is the code implementation of paper *[Utilizing Language-Image P
 ## Abstract
 Word translation without parallel corpora has become feasible, rivaling the performance of supervised methods. Recent ﬁndings have shown the improvement in accuracy and robustness of unsupervised word translation (UWT) by utilizing visual observations, which are universal representations across languages. Our work investigates the potential of using not only visual observations but also pretrained language-image models for enabling a more efﬁcient and robust UWT. We develop a novel UWT method dubbed Word Alignment using Language-Image Pretraining (WALIP), leveraging visual observations via the shared image-text embedding space of CLIPs (Radford et al., 2021). WALIP has a two-step procedure. First, we retrieve word pairs with high conﬁdences of similarity, computed using our proposed image-based ﬁngerprints, which deﬁne the initial pivot for the alignment. Second, we apply our robust Procrustes algorithm to estimate the linear mapping between two embedding spaces, which iteratively corrects and reﬁnes the estimated alignment. Our extensive experiments show that WALIP improves upon the state-of-the-art performance of bilingual word alignment for a few language pairs across different word embeddings and displays great robustness to the dissimilarity of language pairs or training corpora for two word embeddings. 
 
-![A high-level illustration of WALIP (Word Alignment with Language-Image Pretraining).](imgs/walip_high_level_idea.png)
+<!-- ![A high-level illustration of WALIP (Word Alignment with Language-Image Pretraining).](imgs/walip_high_level_idea.png)
+<p align="center">
+  <br>
+</p> -->
+
 <p align="center">
   <b>The high-level illustration of WALIP (Word Alignment with Language-Image Pretraining)</b><br>
+  <img src="imgs/walip_high_level_idea.png">
 </p>
+
 
 ![The two-step procedure of WALIP](imgs/walip_framework.png)
 <p style="text-align: center;">The two-step procedure of WALIP</p>
