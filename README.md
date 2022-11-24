@@ -13,7 +13,7 @@ Word translation without parallel corpora has become feasible, rivaling the perf
 
 <p align="center">
   <img src="imgs/walip_high_level_idea.png">
-  <b>The high-level illustration of WALIP (Word Alignment with Language-Image Pretraining)</b>
+  <b>Conceptual visualization of WALIP for unsupervised word translation between English and French </b>
 <br><br>
   <img src="imgs/walip_framework.png">
   <b>The two-step procedure of WALIP</b>
