@@ -1,7 +1,7 @@
 # Utilizing Language-Image Pretraining for Efficient and Robust Bilingual Word Alignment
 [Tuan Dinh](https://tuan-dinh.github.io/), Jy-yong Sohn, Shashank Rajput, Timothy Ossowski, Yifei Ming, Junjie Hu, Dimitris Papailiopoulos, Kangwook Lee
 
-This repository is the code implementation of paper *[Utilizing Language-Image Pretraining for Efficient and Robust Bilingual Word Alignment](https://arxiv.org/abs/2205.11616)* (appears in the 2022 Conference on Empirical Methods in Natural Language Processing (EMNLP Findings))
+This repository is the code implementation of paper *[Utilizing Language-Image Pretraining for Efficient and Robust Bilingual Word Alignment](https://arxiv.org/abs/2205.11616)* (appears in the Findings of EMNLP 2022).
 
 ## Abstract
 
