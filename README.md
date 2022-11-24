@@ -1,8 +1,20 @@
 # Utilizing Language-Image Pretraining for Efficient and Robust Bilingual Word Alignment
+[Tuan Dinh](https://tuan-dinh.github.io/), Jy-yong Sohn, Shashank Rajput, Timothy Ossowski, Yifei Ming, Junjie Hu, Dimitris Papailiopoulos, Kangwook Lee
 
-## Instructions
+This repository is the code implementation of paper *[Utilizing Language-Image Pretraining for Efficient and Robust Bilingual Word Alignment](https://arxiv.org/abs/2205.11616)* (appears in the 2022 Conference on Empirical Methods in Natural Language Processing (EMNLP Findings))
+
+## Abstract
+
+Word translation without parallel corpora has become feasible, rivaling the performance of supervised methods. Recent ﬁndings have shown the improvement in accuracy and robustness of unsupervised word translation (UWT) by utilizing visual observations, which are universal representations across languages. Our work investigates the potential of using not only visual observations but also pretrained language-image models for enabling a more efﬁcient and robust UWT. We develop a novel UWT method dubbed Word Alignment using Language-Image Pretraining (WALIP), leveraging visual observations via the shared image-text embedding space of CLIPs (Radford et al., 2021). WALIP has a two-step procedure. First, we retrieve word pairs with high conﬁdences of similarity, computed using our proposed image-based ﬁngerprints, which deﬁne the initial pivot for the alignment. Second, we apply our robust Procrustes algorithm to estimate the linear mapping between two embedding spaces, which iteratively corrects and reﬁnes the estimated alignment. Our extensive experiments show that WALIP improves upon the state-of-the-art performance of bilingual word alignment for a few language pairs across different word embeddings and displays great robustness to the dissimilarity of language pairs or training corpora for two word embeddings.
+
+![A high-level illustration of WALIP (Word Alignment with Language-Image Pretraining).](imgs/walip_high_level_idea.pngpng)
+
+![The two-step procedure of WALIP](imgs/walip_framework.png)
+
+
+## Instructions for running the experiments
 ---
-### Setting up an Environment
+### Setting up an environment
 
 From a fresh anaconda environment, we recommend first installing the latest stable version of pytorch. Instructions are available on their [website](https://pytorch.org/get-started/locally/) which might differ for different operating systems. For example, on a linux computer, the following should work:
 
